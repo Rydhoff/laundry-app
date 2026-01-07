@@ -3,7 +3,8 @@
 import { ReactNode } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, ClipboardList, BarChart3, Settings, WashingMachine } from 'lucide-react'
+import { Home, ClipboardList, BarChart3, Settings } from 'lucide-react'
+import Image from 'next/image'
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
     const pathname = usePathname()
@@ -21,7 +22,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <header className="bg-white px-4 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-2xl bg-blue-100 flex items-center justify-center">
-                        <WashingMachine className="w-6 h-6 text-blue-400" />
+                        <Image
+                            src="/logo/logo.png"
+                            alt="Laundry App Logo"
+                            width={120}
+                            height={120}
+                            priority
+                        />
                     </div>
                     <div>
                         <p className="font-semibold text-lg">Laundry App</p>

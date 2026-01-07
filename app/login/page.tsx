@@ -3,8 +3,9 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/app/lib/supabaseClient'
-import { Mail, Lock, Eye, EyeOff, WashingMachine } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react'
 import { toast } from 'sonner'
+import Image from "next/image"
 
 export default function LoginPage() {
     const router = useRouter()
@@ -29,20 +30,26 @@ export default function LoginPage() {
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-linear-to-b bg-blue-50 to-slate-100">
-            <div className="w-full lg:max-w-sm p-6 sm:p-8 lg:bg-white lg:rounded-2xl lg:shadow-sm">
+        <div className="min-h-dvh overflow-hidden flex items-center justify-center bg-linear-to-b bg-blue-50 to-slate-100">
+            < div className="w-full lg:max-w-sm p-6 sm:p-8 lg:bg-white lg:rounded-2xl lg:shadow-sm" >
 
                 {/* Logo */}
-                <div className="flex justify-center mb-6">
-                    <div className="w-16 h-16 rounded-2xl bg-blue-100 flex items-center justify-center">
-                        <WashingMachine className="w-10 h-10 text-blue-400" />
+                < div className="flex justify-center mb-6" >
+                    <div className="w-19 h-19 rounded-2xl bg-blue-100 flex items-center justify-center overflow-hidden">
+                        <Image
+                            src="/logo/logo.png"
+                            alt="Laundry App Logo"
+                            width={120}
+                            height={120}
+                            priority
+                        />
                     </div>
-                </div>
+                </div >
 
                 {/* Title */}
-                <h1 className="text-2xl font-bold text-center">
+                < h1 className="text-2xl font-bold text-center" >
                     Admin Portal
-                </h1>
+                </h1 >
                 <p className="text-sm text-slate-400 text-center mt-1 mb-6">
                     Kelola pesanan dan layanan dengan mudah.
                 </p>
@@ -98,7 +105,7 @@ export default function LoginPage() {
                 <p className="text-xs text-slate-400 text-center mt-8">
                     Version 1.0.0 • Laundry App
                 </p>
-            </div>
-        </div>
+            </div >
+        </div >
     )
 }
