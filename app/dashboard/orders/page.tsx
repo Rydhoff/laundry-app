@@ -169,7 +169,7 @@ Layanan : ${service}
 Jumlah : ${qty}
 Total : Rp ${order.total_price.toLocaleString('id-ID')}
 
-Link Nota : https://laundry-app-teal.vercel.app/dashboard/orders/${order.order_number}
+Link Nota : https://laundry-app-teal.vercel.app/nota/${order.order_number}
 
 Opsi Pembayaran:
 • Cash langsung di tempat
