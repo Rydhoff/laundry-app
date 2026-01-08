@@ -1,87 +1,180 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { supabase } from '@/app/lib/supabaseClient'
+import { useState } from 'react'
+import { ArrowLeft, User, Phone, Check } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+
+type Service = 'reguler' | 'express'
 
 export default function NewOrderPage() {
     const router = useRouter()
-    const [services, setServices] = useState<any[]>([])
-    const [form, setForm] = useState({
-        customer_name: '',
-        phone: '',
-        weight_kg: '',
-        service_id: '',
-    })
-    const [price, setPrice] = useState(0)
 
-    useEffect(() => {
-        supabase.from('services').select('*').then(({ data }) => {
-            setServices(data || [])
-        })
-    }, [])
+    const [name, setName] = useState('')
+    const [phone, setPhone] = useState('')
+    const [service, setService] = useState<Service>('reguler')
+    const [weight, setWeight] = useState(1)
 
-    useEffect(() => {
-        const service = services.find(s => s.id === form.service_id)
-        if (service && form.weight_kg) {
-            setPrice(Number(form.weight_kg) * Number(service.price_per_kg))
-        }
-    }, [form, services])
-
-    const submit = async () => {
-        await supabase.from('orders').insert({
-            ...form,
-            weight_kg: Number(form.weight_kg),
-            price,
-            status: 'Diterima',
-        })
-        router.push('/orders')
+    const SERVICE_PRICE = {
+        reguler: 5000,
+        express: 7000,
     }
 
+    const total = weight * SERVICE_PRICE[service]
+
     return (
-        <div className="p-4 max-w-md mx-auto">
-            <h1 className="text-lg font-semibold mb-4">Order Baru</h1>
+        <div className=" bg-slate-100">
+            <main className="space-y-4">
 
-            <input
-                placeholder="Nama pelanggan"
-                className="input"
-                value={form.customer_name}
-                onChange={e => setForm({ ...form, customer_name: e.target.value })}
-            />
+                {/* ===== CUSTOMER ===== */}
+                <section className="space-y-3">
+                    <h2 className="font-semibold">Data Pelanggan</h2>
 
-            <input
-                placeholder="No HP"
-                className="input"
-                value={form.phone}
-                onChange={e => setForm({ ...form, phone: e.target.value })}
-            />
+                    <div className="relative">
+                        <User className="absolute left-3 top-3.5 text-slate-400" size={18} />
+                        <input
+                            placeholder="Nama pelanggan"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            className="w-full pl-10 pr-3 py-2.5 border border-slate-400 bg-white focus:outline-none focus:ring-1 focus:ring-blue-400"
+                        />
+                    </div>
 
-            <input
-                placeholder="Berat (kg)"
-                type="number"
-                className="input"
-                value={form.weight_kg}
-                onChange={e => setForm({ ...form, weight_kg: e.target.value })}
-            />
+                    <div className="relative">
+                        <Phone className="absolute left-3 top-3.5 text-slate-400" size={18} />
+                        <input
+                            placeholder="Nomor HP"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                            className="w-full pl-10 pr-3 py-2.5 border border-slate-400 bg-white focus:outline-none focus:ring-1 focus:ring-blue-400"
+                        />
+                    </div>
+                </section>
 
-            <select
-                className="input"
-                value={form.service_id}
-                onChange={e => setForm({ ...form, service_id: e.target.value })}
-            >
-                <option value="">Pilih layanan</option>
-                {services.map(s => (
-                    <option key={s.id} value={s.id}>
-                        {s.name}
-                    </option>
-                ))}
-            </select>
+                {/* ===== SERVICE ===== */}
+                <section className="space-y-3">
+                    <h2 className="font-semibold">Jenis Layanan</h2>
 
-            <p className="my-2 font-medium">Total: Rp {price.toLocaleString()}</p>
+                    {/* REGULER */}
+                    <ServiceCard
+                        active={service === 'reguler'}
+                        title="Reguler"
+                        desc="Estimasi 3 Hari"
+                        price={5000}
+                        onClick={() => setService('reguler')}
+                    />
 
-            <button onClick={submit} className="btn-primary w-full">
-                Simpan Order
-            </button>
+                    {/* EXPRESS */}
+                    <ServiceCard
+                        active={service === 'express'}
+                        title="Express"
+                        desc="Estimasi 1 Hari"
+                        price={7000}
+                        onClick={() => setService('express')}
+                    />
+                </section>
+
+                {/* ===== WEIGHT ===== */}
+                <section className="space-y-3">
+                    <h2 className="font-semibold">Berat Laundry</h2>
+
+                    <div className="bg-white rounded-2xl p-5 flex items-center justify-between shadow-sm">
+                        <button
+                            onClick={() =>
+                                setWeight((prev) => Math.max(0.5, +(prev - 0.5).toFixed(1)))
+                            }
+                            className="w-10 h-10 rounded-full border text-xl"
+                        >
+                            −
+                        </button>
+
+                        <div className="text-center">
+                            <p className="text-4xl font-bold">
+                                {weight.toFixed(1)}
+                            </p>
+                            <p className="text-slate-400 text-sm">kg</p>
+                        </div>
+
+                        <button
+                            onClick={() =>
+                                setWeight((prev) => +(prev + 0.5).toFixed(1))
+                            }
+
+                            className="w-12 h-12 rounded-full bg-blue-500 text-white text-xl"
+                        >
+                            +
+                        </button>
+                    </div>
+                </section>
+
+                {/* ===== SUMMARY ===== */}
+                <section className="bg-white rounded-2xl p-4 shadow-sm space-y-2">
+                    <div className="flex justify-between text-sm">
+                        <span>Harga / kg</span>
+                        <span>Rp {SERVICE_PRICE[service].toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                        <span>Berat</span>
+                        <span>{weight} kg</span>
+                    </div>
+                    <div className="flex justify-between font-semibold text-lg pt-2">
+                        <span>Total</span>
+                        <span className="text-blue-600">
+                            Rp {total.toLocaleString('id-ID')}
+                        </span>
+                    </div>
+                </section>
+
+                {/* ===== SAVE ===== */}
+                <button
+                    className="w-full bg-blue-500 hover:bg-blue-600 text-white py-4 rounded-2xl font-semibold flex items-center justify-center gap-2 shadow-md"
+                >
+                    <Check size={20} />
+                    Simpan Order
+                </button>
+            </main>
+        </div>
+    )
+}
+
+/* ======================
+   SERVICE CARD
+====================== */
+function ServiceCard({
+    title,
+    desc,
+    price,
+    active,
+    onClick,
+}: {
+    title: string
+    desc: string
+    price: number
+    active: boolean
+    onClick: () => void
+}) {
+    return (
+        <div
+            onClick={onClick}
+            className={`cursor-pointer bg-white rounded-2xl p-4 flex items-center justify-between border-2 transition
+                ${active ? 'border-blue-500 bg-blue-50' : 'border-transparent'}
+            `}
+        >
+            <div>
+                <p className="font-semibold">{title}</p>
+                <p className="text-sm text-slate-400">{desc}</p>
+            </div>
+
+            <div className="flex items-center gap-3">
+                <p className="font-semibold text-blue-500">
+                    Rp {price.toLocaleString()} / kg
+                </p>
+
+                {active && (
+                    <div className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center">
+                        <Check size={14} />
+                    </div>
+                )}
+            </div>
         </div>
     )
 }

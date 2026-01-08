@@ -6,8 +6,11 @@ import {
     Search,
     ReceiptText,
     Pencil,
-    Trash2
+    Trash2,
+    MessageSquareShare
 } from 'lucide-react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 type OrderStatus = 'Proses' | 'Siap' | 'Selesai'
 
@@ -25,6 +28,7 @@ type Order = {
 export default function OrdersPage() {
     const [filter, setFilter] = useState<'all' | OrderStatus>('all')
     const [search, setSearch] = useState('')
+    const router = useRouter()
 
     const orders: Order[] = [
         {
@@ -36,6 +40,7 @@ export default function OrdersPage() {
             weight: 7,
             status: 'Proses',
             total: 50000,
+            note: 'Tidak perlu cuci kering'
         },
         {
             id: 2,
@@ -46,6 +51,7 @@ export default function OrdersPage() {
             weight: 4,
             status: 'Siap',
             total: 30000,
+            note: 'Tidak perlu cuci kering'
         },
         {
             id: 3,
@@ -56,6 +62,7 @@ export default function OrdersPage() {
             status: 'Selesai',
             date: '12 Sep 2025',
             total: 40000,
+            note: ''
         },
     ]
 
@@ -82,7 +89,7 @@ export default function OrdersPage() {
                     <h1 className="text-xl font-bold">Kelola Order</h1>
                 </div>
 
-                <button className="bg-blue-500 hover:bg-blue-600 text-sm text-white px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-sm">
+                <button onClick={() => router.push('/dashboard/orders/new')} className="bg-blue-500 hover:bg-blue-600 text-sm text-white px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-sm">
                     <Plus size={18} />
                     Tambah Order
                 </button>
@@ -113,7 +120,7 @@ export default function OrdersPage() {
                     <button
                         key={item.key}
                         onClick={() => setFilter(item.key as any)}
-                        className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition
+                        className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition
               ${filter === item.key
                                 ? 'bg-white border border-blue-500 text-blue-500'
                                 : 'bg-white border border-slate-500 text-slate-500  hover:text-blue-500'
@@ -196,6 +203,14 @@ function OrderCard({ order }: { order: Order }) {
             {/* ===== SERVICE & WEIGHT ===== */}
             <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
+                    <p className="text-slate-500">No. Order</p>
+                    <p className="font-semibold">{order.id}</p>
+                </div>
+                <div>
+                    <p className="text-slate-500">Catatan</p>
+                    <p className="font-semibold">{order.note}</p>
+                </div>
+                <div>
                     <p className="text-slate-500">Layanan</p>
                     <p className="font-semibold">{order.service}</p>
                 </div>
@@ -235,16 +250,20 @@ function OrderCard({ order }: { order: Order }) {
 
             {/* ===== FOOTER ACTION ===== */}
             <div className="flex items-center justify-between pt-1">
-                <button className="flex items-center gap-2 text-green-600 font-medium">
-                    <ReceiptText size={18} />
+                <button className="flex items-center gap-2 text-blue-500 font-medium">
+                    <MessageSquareShare size={18} />
                     Kirim Nota
                 </button>
 
+
                 <div className="flex gap-3">
-                    <button className="text-slate-500 hover:text-blue-500">
+                    <Link href={`/nota/${order.id}`} className="text-blue-500!">
+                        <ReceiptText size={18} />
+                    </Link>
+                    <button className="text-blue-500">
                         <Pencil size={18} />
                     </button>
-                    <button className="text-slate-500 hover:text-red-500">
+                    <button className="text-blue-500">
                         <Trash2 size={18} />
                     </button>
                 </div>

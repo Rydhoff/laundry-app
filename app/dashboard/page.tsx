@@ -11,9 +11,11 @@ import {
     CalendarDays,
     Clock,
 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 export default function DashboardPage() {
     const [now, setNow] = useState(new Date())
+    const router = useRouter()
 
     useEffect(() => {
         const timer = setInterval(() => {
@@ -107,6 +109,7 @@ export default function DashboardPage() {
 
             {/* ===== TAMBAH ORDER ===== */}
             <button
+                onClick={() => router.push('/dashboard/orders/new')}
                 className="w-full bg-blue-500 hover:bg-blue-600 text-white py-4 rounded-2xl font-semibold flex items-center justify-center gap-2 shadow-md"
             >
                 <Plus size={22} />

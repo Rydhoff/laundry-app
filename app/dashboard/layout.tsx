@@ -19,7 +19,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     return (
         <div className="min-h-screen bg-slate-100 pb-28">
             {/* ===== HEADER ===== */}
-            <header className="bg-white px-4 py-3 flex items-center justify-between">
+            <header className="fixed shadow-xs w-full z-10 bg-white px-4 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-2xl bg-blue-100 flex items-center justify-center">
                         <Image
@@ -37,7 +37,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             </header>
 
             {/* ===== CONTENT ===== */}
-            <main className="p-4 space-y-5">
+            <main className="p-4 pt-20 space-y-5">
                 {children}
             </main>
 
