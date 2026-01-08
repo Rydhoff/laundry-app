@@ -161,13 +161,13 @@ export default function OrdersPage() {
 Jl. Merdeka No. 10
 WA: 08123456789
 
-No Order  : ${order.order_number}
-Status    : ${order.status}
-Nama      : ${order.customer_name}
+No Order : ${order.order_number}
+Status : ${order.status}
+Nama : ${order.customer_name}
 Tgl Masuk : ${formatDateID(order.created_at)}
-Layanan   : ${service}
-Jumlah    : ${qty}
-Total     : Rp ${order.total_price.toLocaleString('id-ID')}
+Layanan : ${service}
+Jumlah : ${qty}
+Total : Rp ${order.total_price.toLocaleString('id-ID')}
 
 Link Nota : https://laundry-app-teal.vercel.app/dashboard/orders/${order.order_number}
 
