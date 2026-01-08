@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Banknote, LogOut, ReceiptText, Save, WashingMachine } from 'lucide-react'
 import { supabase } from '@/app/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
@@ -8,29 +8,82 @@ import { useRouter } from 'next/navigation'
 export default function SettingPage() {
     const router = useRouter()
     const [loading, setLoading] = useState(false)
+    const [address, setAddress] = useState('')
+    const [phone, setPhone] = useState('')
+    const [activeUntil, setActiveUntil] = useState('')
+    const [waTemplateId, setWaTemplateId] = useState('')
+    const [notaHeader, setNotaHeader] = useState('')
+    const [notaFooter, setNotaFooter] = useState('')
+    const [profileId, setProfileId] = useState('')
+    const [laundryName, setLaundryName] = useState('')
 
-    /* ======================
-       PROFIL LAUNDRY
-    ====================== */
-    const [laundryName, setLaundryName] = useState('Laundry Bersih Jaya')
-    const activeUntil = '31 Desember 2026'
+    useEffect(() => {
+        const loadSettings = async () => {
+            /* ===== PROFILES (1 DATA) ===== */
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('id, laundry_name, address, phone, active_until')
+                .single()
 
-    /* ======================
-       LAYANAN & HARGA
-    ====================== */
-    const [regularPrice, setRegularPrice] = useState(5000)
-    const [expressPrice, setExpressPrice] = useState(7000)
+            if (profile) {
+                setProfileId(profile.id)
+                setLaundryName(profile.laundry_name)
+                setAddress(profile.address)
+                setPhone(profile.phone)
+                setActiveUntil(profile.active_until)
+            }
 
-    /* ======================
-       NOTA WHATSAPP
-    ====================== */
-    const [notaHeader, setNotaHeader] = useState("")
+            /* ===== WHATSAPP TEMPLATE (1 DATA) ===== */
+            const { data: wa } = await supabase
+                .from('whatsapp_templates')
+                .select('id, header, footer')
+                .single()
 
-    const [notaFooter, setNotaFooter] = useState("")
+            if (wa) {
+                setWaTemplateId(wa.id)
+                setNotaHeader(wa.header)
+                setNotaFooter(wa.footer)
+            }
+        }
+
+        loadSettings()
+    }, [])
+
 
     /* ======================
        HANDLERS
     ====================== */
+    const updateProfile = async () => {
+        if (!profileId) return
+
+        await supabase
+            .from('profiles')
+            .update({
+                laundry_name: laundryName,
+                address,
+                phone,
+            })
+            .eq('id', profileId)
+    }
+
+    const updateWhatsappTemplate = async () => {
+        if (!waTemplateId) return
+
+        await supabase
+            .from('whatsapp_templates')
+            .update({
+                header: notaHeader,
+                footer: notaFooter,
+            })
+            .eq('id', waTemplateId)
+    }
+
+
+
+
+
+
+
     const handleSave = () => {
         alert('Pengaturan berhasil disimpan')
         // nanti: update ke Supabase
@@ -54,72 +107,17 @@ export default function SettingPage() {
       ====================== */}
             <Section title="Profil Laundry">
                 <Field label="Nama">
-                    <p className="text-sm">{laundryName}</p>
+                    <input className="block py-1 focus:outline-none" value={laundryName} onChange={(e) => setLaundryName(e.target.value)} />
                 </Field>
 
-                <Field label="Masa Aktif">
-                    <p className="mt-1 bg-white text-xs w-fit text-blue-500 px-2 py-1 border border-blue-500 rounded-full">{`Aktif sampai ${activeUntil}`}</p>
+                <Field label="Alamat">
+                    <input className="block py-1 focus:outline-none" value={address} onChange={(e) => setAddress(e.target.value)} />
                 </Field>
-            </Section>
 
-            {/* ======================
-          LAYANAN & HARGA
-      ====================== */}
-            <Section title="Layanan & Harga">
-                {/* REGULER */}
-                <div className="bg-white rounded-2xl py-3 px-4 mb-3 border border-blue-300">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-500 flex items-center justify-center font-semibold">
-                            <WashingMachine size={28} />
-                        </div>
-
-                        <div>
-                            <p className="font-semibold mb-1">Reguler (3 Hari)</p>
-                            <div className="text-right">
-                                <input
-                                    type="number"
-                                    value={regularPrice}
-                                    onChange={(e) => setRegularPrice(Number(e.target.value))}
-                                    className="w-24 text-right px-4 py-1 rounded-xl border border-slate-300 text-sm font-semibold
-              focus:outline-none focus:ring-1 focus:ring-blue-400 bg-white text-slate-700 transition"
-                                />
-                                <p className="inline text-sm mt-1"> / kg</p>
-                            </div>
-                        </div>
-                    </div>
-
-
-                </div>
-
-                {/* EXPRESS */}
-                <div className="bg-white rounded-2xl py-3 px-4 mb-3 border border-blue-300">
-                    <div className="flex items-center gap-4" >
-                        <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-500 flex items-center justify-center font-semibold">
-                            <WashingMachine size={28} />
-                        </div>
-                        <div>
-                            <p className="font-semibold mb-2">Express (1 Hari)</p>
-                            <div className="text-right">
-                                <input
-                                    type="number"
-                                    value={expressPrice}
-                                    onChange={(e) => setExpressPrice(Number(e.target.value))}
-                                    className="w-24 text-right px-4 py-1 rounded-xl border border-slate-300 text-sm font-semibold
-              focus:outline-none focus:ring-1 focus:ring-blue-400 bg-white text-slate-700 transition"
-                                />
-                                <p className="inline text-sm mt-1"> / kg</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <button
-                    onClick={handleSave}
-                    className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-2xl font-semibold flex items-center justify-center gap-2"
-                >
-                    <Banknote size={24} />
-                    Update Harga
-                </button>
+                <Field label="No. Telp">
+                    <input className="block py-1 focus:outline-none" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                </Field>
+                <p className="mt-4 mb-2 bg-white text-xs w-fit text-blue-500 px-2 py-1 border border-blue-500 rounded-full">Aktif sampai {new Date(activeUntil).toLocaleDateString('id-ID')}</p>
             </Section>
 
             {/* ======================
@@ -141,19 +139,18 @@ WA: 08123456789`}
                 </Field>
 
                 {/* FIXED CONTENT */}
-                <div className="bg-slate-50 border border-dashed border-slate-300 rounded-xl p-4 text-sm text-slate-500">
-                    <label className="text font-semibold text-slate-800">
-                        Isi Nota Otomatis
-                    </label>
-                    <ul className="list-disc p-4 space-y-1">
-                        <li>No. Nota</li>
-                        <li>Nama Pelanggan</li>
-                        <li>Tanggal Masuk</li>
-                        <li>Status Order</li>
-                        <li>Total</li>
-                        <li>Link Nota (/nota/:id)</li>
-                    </ul>
-                </div>
+                <Field label="Isi Nota Otomatis">
+                    <div className="mt-2 bg-slate-50 border border-dashed border-slate-300 rounded-xl px-4 text-sm text-slate-500">
+                        <ul className="list-disc p-4 space-y-1">
+                            <li>No. Nota</li>
+                            <li>Nama Pelanggan</li>
+                            <li>Tanggal Masuk</li>
+                            <li>Status Order</li>
+                            <li>Total</li>
+                            <li>Link Nota (/nota/:id)</li>
+                        </ul>
+                    </div>
+                </Field>
 
                 <Field label="Footer Nota">
                     <textarea

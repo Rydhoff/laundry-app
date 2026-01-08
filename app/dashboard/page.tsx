@@ -12,18 +12,61 @@ import {
     Clock,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { supabase } from '../lib/supabaseClient'
 
 export default function DashboardPage() {
     const [now, setNow] = useState(new Date())
     const router = useRouter()
+    const [loading, setLoading] = useState(true)
+
+    const [incomeToday, setIncomeToday] = useState(0)
+    const [totalToday, setTotalToday] = useState(0)
+    const [statusCount, setStatusCount] = useState({
+        proses: 0,
+        siap: 0,
+        selesai: 0,
+    })
+
 
     useEffect(() => {
-        const timer = setInterval(() => {
-            setNow(new Date())
-        }, 60000) // update tiap menit
+        const fetchDashboard = async () => {
+            setLoading(true)
 
-        return () => clearInterval(timer)
+            const startOfDay = new Date()
+            startOfDay.setHours(0, 0, 0, 0)
+
+            const endOfDay = new Date()
+            endOfDay.setHours(23, 59, 59, 999)
+
+            const { data, error } = await supabase
+                .from('orders')
+                .select('total_price, status')
+                .gte('created_at', startOfDay.toISOString())
+                .lte('created_at', endOfDay.toISOString())
+
+            if (error) {
+                console.error(error)
+                setLoading(false)
+                return
+            }
+
+            const income = data.reduce((sum, o) => sum + o.total_price, 0)
+
+            setIncomeToday(income)
+            setTotalToday(data.length)
+
+            setStatusCount({
+                proses: data.filter((o) => o.status === 'Proses').length,
+                siap: data.filter((o) => o.status === 'Siap').length,
+                selesai: data.filter((o) => o.status === 'Selesai').length,
+            })
+
+            setLoading(false)
+        }
+
+        fetchDashboard()
     }, [])
+
 
     const time = now.toLocaleTimeString('id-ID', {
         hour: '2-digit',
@@ -41,11 +84,12 @@ export default function DashboardPage() {
         <>
             {/* ===== PENDAPATAN HARI INI ===== */}
             <div className="relative overflow-hidden bg-linear-to-br from-blue-500 to-blue-600 text-white rounded-3xl p-6">
-
                 <div className="flex items-start justify-between">
                     <div>
                         <p className="text-md opacity-80">Pendapatan Hari Ini</p>
-                        <p className="text-4xl font-bold mt-2">Rp 450.000</p>
+                        <p className="text-4xl font-bold mt-2">
+                            Rp {loading ? "" : incomeToday.toLocaleString('id-ID')}
+                        </p>
                     </div>
 
                     {/* Icon */}
@@ -79,31 +123,35 @@ export default function DashboardPage() {
             <div className="grid grid-cols-2 gap-4">
                 <StatBox
                     title="Hari Ini"
-                    value="12"
+                    value={totalToday.toString()}
                     icon={<ClipboardList size={20} />}
                     iconBg="bg-orange-100"
                     iconColor="text-orange-500"
+                    isLoading={loading ? "text-white" : ""}
                 />
                 <StatBox
                     title="Diproses"
-                    value="4"
+                    value={statusCount.proses.toString()}
                     icon={<Loader size={20} />}
                     iconBg="bg-blue-100"
                     iconColor="text-blue-500"
+                    isLoading={loading ? "text-white" : ""}
                 />
                 <StatBox
                     title="Siap Diambil"
-                    value="3"
+                    value={statusCount.siap.toString()}
                     icon={<PackageCheck size={20} />}
                     iconBg="bg-purple-100"
                     iconColor="text-purple-500"
+                    isLoading={loading ? "text-white" : ""}
                 />
                 <StatBox
                     title="Selesai"
-                    value="8"
+                    value={statusCount.selesai.toString()}
                     icon={<CheckCircle size={20} />}
                     iconBg="bg-green-100"
                     iconColor="text-green-600"
+                    isLoading={loading ? "text-white" : ""}
                 />
             </div>
 
@@ -125,9 +173,10 @@ type StatBoxProps = {
     icon: React.ReactNode
     iconBg: string
     iconColor: string
+    isLoading: string
 }
 
-function StatBox({ title, value, icon, iconBg, iconColor }: StatBoxProps) {
+function StatBox({ title, value, icon, iconBg, iconColor, isLoading }: StatBoxProps) {
     return (
         <div className="bg-white rounded-2xl p-4 shadow-sm">
             <div className="flex items-center gap-3">
@@ -139,9 +188,9 @@ function StatBox({ title, value, icon, iconBg, iconColor }: StatBoxProps) {
 
                 <div>
                     <p className="text-sm text-slate-400">{title}</p>
-                    <p className="text-xl font-bold">{value}</p>
+                    <p className={`text-xl font-bold ${isLoading}`}>{value}</p>
                 </div>
             </div>
-        </div>
+        </div >
     )
 }

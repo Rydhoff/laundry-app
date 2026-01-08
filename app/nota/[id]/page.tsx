@@ -1,114 +1,128 @@
 import { notFound } from 'next/navigation'
+import { supabase } from '@/app/lib/supabaseClient'
 
 type OrderStatus = 'Proses' | 'Siap' | 'Selesai'
 
 type Order = {
-    id: number
-    name: string
-    phone: string
-    date: string
-    service: string
-    weight: number
+    order_number: number
+    customer_name: string
+    customer_phone: string
+    note: string | null
+    category: 'kilo' | 'satuan'
+    weight_kg: number | null
+    qty: number | null
     status: OrderStatus
-    total: number
-    note?: string
-}
+    total_price: number
+    created_at: string
 
-/* ===== DUMMY DATA ===== */
-const ORDERS: Order[] = [
-    {
-        id: 1,
-        name: 'Andi Pratama',
-        phone: '08123456789',
-        date: '12 September 2025',
-        service: 'Express (1 Hari)',
-        weight: 7,
-        status: 'Proses',
-        total: 50000,
-        note: 'Tidak perlu cuci kering',
-    },
-    {
-        id: 2,
-        name: 'Budi Santoso',
-        phone: '08987654321',
-        date: '12 September 2025',
-        service: 'Regular (3 Hari)',
-        weight: 4,
-        status: 'Siap',
-        total: 30000,
-    },
-]
+    kilo_service?: { name: string }
+    satuan_item?: { name: string }
+    speed?: { name: string }
+}
 
 export default async function NotaPage({
     params,
 }: {
     params: Promise<{ id: string }>
 }) {
-    const { id } = await params   // 🔥 WAJIB await
-    const order = ORDERS.find((o) => o.id === Number(id))
+    const { id } = await params        // ✅ WAJIB await
+    const orderNumber = Number(id)
 
-    if (!order) return notFound()
+    if (Number.isNaN(orderNumber)) return notFound()
+
+    const { data: order, error } = await supabase
+        .from('orders')
+        .select(`
+    order_number,
+    customer_name,
+    customer_phone,
+    note,
+    category,
+    weight_kg,
+    qty,
+    status,
+    total_price,
+    created_at,
+    kilo_service:kilo_services ( name ),
+    satuan_item:satuan_items ( name ),
+    speed:service_speeds ( name )
+  `)
+        .eq('order_number', orderNumber)
+        .single<Order>()   // 🔥 INI KUNCINYA
+
+    if (error || !order) return notFound()
+
+    const serviceText =
+        order.category === 'kilo'
+            ? `${order.kilo_service?.name} - ${order.speed?.name}`
+            : `${order.satuan_item?.name} - ${order.speed?.name}`
+
+    const qtyText =
+        order.category === 'kilo'
+            ? `${order.weight_kg} Kg`
+            : `${order.qty} Pcs`
+
+    const dateText = new Date(order.created_at).toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+    })
+
+    const formatNotaNumber = (orderNumber: number) =>
+        orderNumber.toString().padStart(4, '0')
+
 
     return (
-        <div className="min-h-screen bg-white flex items-center justify-center p-4">
+        <div className="min-h-dvh bg-slate-100 flex items-center justify-center p-4">
             <div className="w-full max-w-md bg-white rounded-3xl shadow-lg overflow-hidden">
 
                 {/* ===== HEADER ===== */}
                 <div className="bg-blue-500 text-white px-6 py-5 text-center">
-                    <h1 className="text-lg font-bold tracking-wide">
-                        NOTA ELEKTRONIK
-                    </h1>
-                    <p className="text-sm opacity-90 mt-1">
-                        Laundry Bersih Jaya
-                    </p>
+                    <h1 className="text-lg font-bold">NOTA ELEKTRONIK</h1>
+                    <p className="text-sm opacity-90 mt-1">Laundry Bersih Jaya</p>
                     <p className="text-xs opacity-80">
                         Jl. Merdeka No. 10 • WA 08123456789
                     </p>
                 </div>
 
                 {/* ===== BODY ===== */}
-                <div className="p-6 space-y-5">
+                <div className="p-6 space-y-5 text-sm">
 
-                    {/* INFO */}
-                    <div className="space-y-2 text-sm">
-                        <Info label="No. Nota" value={`#${order.id}`} />
-                        <Info label="Nama" value={order.name} />
-                        <Info label="Tanggal Masuk" value={order.date} />
+                    <Info label="No. Nota" value={`#${formatNotaNumber(order.order_number)}`} />
+                    <Info label="Nama" value={order.customer_name} />
+                    <Info label="Tanggal Masuk" value={dateText} />
 
-                        <div className="flex justify-between items-center">
-                            <span className="text-slate-500">Status</span>
-                            <span
-                                className={`px-3 py-1 rounded-full text-xs font-medium
-                                ${order.status === 'Proses' && 'bg-yellow-100 text-yellow-700'}
-                                ${order.status === 'Siap' && 'bg-blue-100 text-blue-600'}
-                                ${order.status === 'Selesai' && 'bg-green-100 text-green-600'}
-                            `}
-                            >
-                                {order.status}
-                            </span>
-                        </div>
-                    </div>
-
-                    <Divider />
-
-                    {/* DETAIL */}
-                    <div className="space-y-2 text-sm">
-                        <Info label="Layanan" value={order.service} />
-                        <Info label="Berat" value={`${order.weight} kg`} />
-                        {order.note && (
-                            <Info label="Catatan" value={order.note} />
-                        )}
-                    </div>
-
-                    <Divider />
-
-                    {/* TOTAL */}
                     <div className="flex justify-between items-center">
-                        <span className="text-base font-semibold">Total</span>
-                        <span className="text-xl font-bold text-blue-600">
-                            Rp {order.total.toLocaleString('id-ID')}
+                        <span className="text-slate-500">Status</span>
+                        <span
+                            className={`px-3 py-1 rounded-full text-xs font-medium
+                ${order.status === 'Proses' && 'bg-yellow-100 text-yellow-700'}
+                ${order.status === 'Siap' && 'bg-blue-100 text-blue-600'}
+                ${order.status === 'Selesai' && 'bg-green-100 text-green-600'}
+              `}
+                        >
+                            {order.status}
                         </span>
                     </div>
+
+                    <Divider />
+
+                    <Info label="Layanan" value={serviceText} />
+                    <Info label="Jumlah" value={qtyText} />
+
+                    {order.note && (
+                        <Info label="Catatan" value={order.note} />
+                    )}
+
+                    <Divider />
+
+                    <div className="flex justify-between items-center">
+                        <span className="font-semibold">Total</span>
+                        <span className="text-xl font-bold text-blue-600">
+                            Rp {order.total_price.toLocaleString('id-ID')}
+                        </span>
+                    </div>
+
                 </div>
             </div>
         </div>
@@ -117,7 +131,7 @@ export default async function NotaPage({
 
 function Info({ label, value }: { label: string; value: string }) {
     return (
-        <div className="flex justify-between text-sm">
+        <div className="flex justify-between">
             <span className="text-slate-500">{label}</span>
             <span className="font-medium text-right">{value}</span>
         </div>

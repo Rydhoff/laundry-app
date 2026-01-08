@@ -11,75 +11,181 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { supabase } from '@/app/lib/supabaseClient'
+import { useEffect } from 'react'
+
 
 type OrderStatus = 'Proses' | 'Siap' | 'Selesai'
 
 type Order = {
-    [x: string]: any
-    id: number
-    name: string
-    phone: string
-    date: string
-    service: string
-    weight: number
+    id: string
+    order_number: number
+
+    customer_name: string
+    customer_phone: string
+    note: string | null
+
+    category: 'kilo' | 'satuan'
+
+    kilo_service_id: string | null
+    satuan_item_id: string | null
+    speed_id: string
+
+    kilo_service?: { name: string }
+    satuan_item?: { name: string }
+    speed?: { name: string }
+
+    weight_kg: number | null
+    qty: number | null
+
+    base_price: number
+    express_extra: number
+    price_per_unit: number
+    total_price: number
+
     status: OrderStatus
+    created_at: string
 }
+
 
 export default function OrdersPage() {
     const [filter, setFilter] = useState<'all' | OrderStatus>('all')
     const [search, setSearch] = useState('')
     const router = useRouter()
+    const [orders, setOrders] = useState<Order[]>([])
+    const [loading, setLoading] = useState(true)
+    const [editOrder, setEditOrder] = useState<Order | null>(null)
+    const [deleteOrderId, setDeleteOrderId] = useState<string | null>(null)
 
-    const orders: Order[] = [
-        {
-            id: 1,
-            name: 'Andi Pratama',
-            phone: '08123456789',
-            date: '12 Sep 2025',
-            service: 'Express (1 Hari)',
-            weight: 7,
-            status: 'Proses',
-            total: 50000,
-            note: 'Tidak perlu cuci kering'
-        },
-        {
-            id: 2,
-            name: 'Budi Santoso',
-            phone: '08987654321',
-            date: '12 Sep 2025',
-            service: 'Regular (3 Hari)',
-            weight: 4,
-            status: 'Siap',
-            total: 30000,
-            note: 'Tidak perlu cuci kering'
-        },
-        {
-            id: 3,
-            name: 'Siti Aminah',
-            phone: '11 Sep 2025',
-            service: 'Express (1 Hari)',
-            weight: 6,
-            status: 'Selesai',
-            date: '12 Sep 2025',
-            total: 40000,
-            note: ''
-        },
-    ]
+    useEffect(() => {
+        const fetchOrders = async () => {
+            setLoading(true)
+
+            const { data, error } = await supabase
+                .from('orders')
+                .select(`
+    *,
+    kilo_service:kilo_services ( name ),
+    satuan_item:satuan_items ( name ),
+    speed:service_speeds ( name )
+  `)
+                .order('created_at', { ascending: false })
+
+
+            if (error) {
+                console.error(error)
+                setLoading(false)
+                return
+            }
+
+            setOrders(data as Order[])
+            setLoading(false)
+        }
+
+        fetchOrders()
+    }, [])
+
+
 
     const filteredOrders = orders.filter((o) => {
         const byStatus = filter === 'all' || o.status === filter
         const bySearch =
-            o.name.toLowerCase().includes(search.toLowerCase()) ||
-            o.phone.includes(search)
+            o.customer_name.toLowerCase().includes(search.toLowerCase()) ||
+            o.customer_phone.includes(search) ||
+            o.order_number.toString().includes(search)
+
         return byStatus && bySearch
     })
 
-    const count = {
-        all: orders.length,
-        Proses: orders.filter((o) => o.status === 'Proses').length,
-        Siap: orders.filter((o) => o.status === 'Siap').length,
-        Selesai: orders.filter((o) => o.status === 'Selesai').length,
+    const updateStatus = async (id: string, status: OrderStatus) => {
+        const { error } = await supabase
+            .from('orders')
+            .update({ status })
+            .eq('id', id)
+
+        if (error) {
+            console.error(error)
+            return
+        }
+
+        // update UI langsung (tanpa refetch)
+        setOrders((prev) =>
+            prev.map((o) =>
+                o.id === id ? { ...o, status } : o
+            )
+        )
     }
+
+    const handleDelete = async () => {
+        if (!deleteOrderId) return
+
+        const { error } = await supabase
+            .from('orders')
+            .delete()
+            .eq('id', deleteOrderId)
+
+        if (error) {
+            console.error(error)
+            return
+        }
+
+        setOrders((prev) => prev.filter((o) => o.id !== deleteOrderId))
+        setDeleteOrderId(null)
+    }
+
+    const buildWhatsappMessage = (order: Order) => {
+        const service =
+            order.category === 'kilo'
+                ? `${order.kilo_service?.name} - ${order.speed?.name}`
+                : `${order.satuan_item?.name} - ${order.speed?.name}`
+
+
+        const qty =
+            order.category === 'kilo'
+                ? `${order.weight_kg} Kg`
+                : `${order.qty} Pcs`
+
+        return `
+*NOTA LAUNDRY*
+
+*Laundry Bersih Jaya*
+Jl. Merdeka No. 10
+WA: 08123456789
+
+No Order  : ${order.order_number}
+Status    : ${order.status}
+Nama      : ${order.customer_name}
+Tgl Masuk : ${order.created_at}
+Layanan   : ${service}
+Jumlah    : ${qty}
+Total     : Rp ${order.total_price.toLocaleString('id-ID')}
+
+Link Nota : _https://laundry-app-teal.vercel.app/dashboard/orders/${order.id}_
+
+Opsi Pembayaran:
+• Cash langsung di tempat
+• Transfer Bank BCA (08123456789)
+• Dana (08123456789)
+
+Terima kasih telah menggunakan jasa kami 🙏
+  `.trim()
+    }
+
+    const sendWhatsapp = (order: Order) => {
+        const phone = order.customer_phone.replace(/[^0-9]/g, '')
+
+        // convert 08xxx → 628xxx
+        const waNumber = phone.startsWith('0')
+            ? '62' + phone.slice(1)
+            : phone
+
+        const message = buildWhatsappMessage(order)
+        const url = `https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`
+
+        window.open(url, '_blank')
+    }
+
+
 
     return (
         <div className="space-y-5">
@@ -104,7 +210,7 @@ export default function OrdersPage() {
                 <input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Cari nama pelanggan atau nomor HP"
+                    placeholder="Cari dari nama, no. hp, atau no. order"
                     className="w-full rounded-2xl! pl-10 pr-3 py-2.5 border border-slate-400 bg-white focus:outline-none focus:ring-1 focus:ring-blue-400"
                 />
             </div>
@@ -131,13 +237,39 @@ export default function OrdersPage() {
                 ))}
             </div>
 
+            {loading && (
+                <p className="text-center text-sm text-slate-500 py-10">
+                    Memuat data...
+                </p>
+            )}
+
+            {editOrder && (
+                <EditOrderModal
+                    order={editOrder}
+                    onClose={() => setEditOrder(null)}
+                    onSaved={(updated) => {
+                        setOrders((prev) =>
+                            prev.map((o) => (o.id === updated.id ? updated : o))
+                        )
+                        setEditOrder(null)
+                    }}
+                />
+            )}
+
+            {deleteOrderId && (
+                <ConfirmDeleteModal
+                    onCancel={() => setDeleteOrderId(null)}
+                    onConfirm={handleDelete}
+                />
+            )}
+
             {/* ===== ORDER LIST ===== */}
             <div className="space-y-3">
                 {filteredOrders.map((order) => (
-                    <OrderCard key={order.id} order={order} />
+                    <OrderCard key={order.id} order={order} onUpdateStatus={updateStatus} onEdit={() => setEditOrder(order)} onDelete={() => setDeleteOrderId(order.id)} onSendNota={() => sendWhatsapp(order)} />
                 ))}
 
-                {filteredOrders.length === 0 && (
+                {!loading && filteredOrders.length === 0 && (
                     <p className="text-center text-sm text-slate-500 py-10">
                         Tidak ada order ditemukan
                     </p>
@@ -147,47 +279,52 @@ export default function OrdersPage() {
     )
 }
 
-const statusStyle: Record<OrderStatus, {
-    badge: string
-    button: string
-    buttonInactive: string
-}> = {
-    Proses: {
-        badge: 'bg-yellow-100 text-yellow-700',
-        button: 'bg-yellow-500 text-white',
-        buttonInactive: 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100',
-    },
-    Siap: {
-        badge: 'bg-blue-100 text-blue-600',
-        button: 'bg-blue-500 text-white',
-        buttonInactive: 'bg-blue-50 text-blue-600 hover:bg-blue-100',
-    },
-    Selesai: {
-        badge: 'bg-green-100 text-green-600',
-        button: 'bg-green-500 text-white',
-        buttonInactive: 'bg-green-50 text-green-600 hover:bg-green-100',
-    },
-}
-
-
 /* ======================
    ORDER CARD
 ====================== */
-function OrderCard({ order }: { order: Order }) {
+function OrderCard({
+    order,
+    onUpdateStatus,
+    onEdit,
+    onDelete,
+    onSendNota,
+}: {
+    order: Order
+    onUpdateStatus: (id: string, status: OrderStatus) => void
+    onEdit: () => void
+    onDelete: () => void
+    onSendNota: () => void
+}) {
+
     const statusBadge = {
         Proses: 'bg-yellow-100 text-yellow-700',
         Siap: 'bg-blue-100 text-blue-600',
         Selesai: 'bg-green-100 text-green-600',
     }[order.status]
 
+    const getServiceText = (order: Order) => {
+        if (order.category === 'kilo') {
+            return `${order.kilo_service?.name} - ${order.speed?.name}`
+        }
+        return `${order.satuan_item?.name} - ${order.speed?.name}`
+    }
+
+
+    const formatDate = (date: string) =>
+        new Date(date).toLocaleDateString('id-ID', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+        })
+
     return (
         <div className="bg-white rounded-lg p-4 shadow-sm space-y-4">
             {/* ===== HEADER ===== */}
             <div className="flex items-start justify-between">
                 <div>
-                    <p className="font-semibold">{order.name}</p>
-                    <p className="text-sm text-slate-500">{order.phone}</p>
-                    <p className="text-xs text-slate-500">{order.date}</p>
+                    <p className="font-semibold">{order.customer_name}</p>
+                    <p className="text-sm text-slate-500">{order.customer_phone}</p>
+                    <p className="text-xs text-slate-500">{formatDate(order.created_at)}</p>
                 </div>
 
                 <span
@@ -204,7 +341,7 @@ function OrderCard({ order }: { order: Order }) {
             <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                     <p className="text-slate-500">No. Order</p>
-                    <p className="font-semibold">{order.id}</p>
+                    <p className="font-semibold">{order.order_number}</p>
                 </div>
                 <div>
                     <p className="text-slate-500">Catatan</p>
@@ -212,11 +349,11 @@ function OrderCard({ order }: { order: Order }) {
                 </div>
                 <div>
                     <p className="text-slate-500">Layanan</p>
-                    <p className="font-semibold">{order.service}</p>
+                    <p className="font-semibold">{getServiceText(order)}</p>
                 </div>
                 <div>
-                    <p className="text-slate-500">Berat</p>
-                    <p className="font-semibold">{order.weight} kg</p>
+                    <p className="text-slate-500">{order.category === 'kilo' ? 'Berat' : 'Qty'}</p>
+                    <p className="font-semibold">{order.category === 'kilo' ? order.weight_kg + ' Kg' : order.qty + ' Pcs'}</p>
                 </div>
             </div>
 
@@ -227,7 +364,7 @@ function OrderCard({ order }: { order: Order }) {
             <div>
                 <p className="text-slate-500 text-sm">Total</p>
                 <p className="text-blue-600 font-bold text-lg">
-                    Rp {order.total.toLocaleString('id-ID')}
+                    Rp {order.total_price.toLocaleString('id-ID')}
                 </p>
             </div>
 
@@ -236,12 +373,17 @@ function OrderCard({ order }: { order: Order }) {
                 {(['Proses', 'Siap', 'Selesai'] as OrderStatus[]).map((s) => (
                     <button
                         key={s}
+                        onClick={() => {
+                            if (order.status !== s) {
+                                onUpdateStatus(order.id, s)
+                            }
+                        }}
                         className={`flex-1 py-2 rounded-lg text-sm font-semibold transition
-              ${order.status === s
+        ${order.status === s
                                 ? 'bg-blue-500 text-white shadow-sm'
                                 : 'border border-slate-500 text-slate-500 hover:bg-slate-50'
                             }
-            `}
+      `}
                     >
                         {s}
                     </button>
@@ -250,21 +392,251 @@ function OrderCard({ order }: { order: Order }) {
 
             {/* ===== FOOTER ACTION ===== */}
             <div className="flex items-center justify-between pt-1">
-                <button className="flex items-center gap-2 text-blue-500 font-medium">
+                <button onClick={onSendNota} className="flex items-center gap-2 text-blue-500 font-medium">
                     <MessageSquareShare size={18} />
                     Kirim Nota
                 </button>
 
 
                 <div className="flex gap-3">
-                    <Link href={`/nota/${order.id}`} className="text-blue-500!">
+                    <Link href={`/nota/${order.order_number}`} className="text-blue-500!">
                         <ReceiptText size={18} />
                     </Link>
-                    <button className="text-blue-500">
+                    <button onClick={onEdit} className="text-blue-500">
                         <Pencil size={18} />
                     </button>
-                    <button className="text-blue-500">
+                    <button onClick={onDelete} className="text-blue-500">
                         <Trash2 size={18} />
+                    </button>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+function EditOrderModal({
+    order,
+    onClose,
+    onSaved,
+}: {
+    order: Order
+    onClose: () => void
+    onSaved: (order: Order) => void
+}) {
+    const [form, setForm] = useState({ ...order })
+
+    const updateField = (key: keyof Order, value: any) => {
+        setForm((p) => ({ ...p, [key]: value }))
+    }
+
+    const handleSave = async () => {
+        const { data, error } = await supabase
+            .from('orders')
+            .update({
+                customer_name: form.customer_name,
+                customer_phone: form.customer_phone,
+                note: form.note,
+
+                category: form.category,
+                kilo_service: form.kilo_service,
+                satuan_item: form.satuan_item,
+                speed: form.speed,
+
+                weight_kg: form.weight_kg,
+                qty: form.qty,
+
+                base_price: form.base_price,
+                express_extra: form.express_extra,
+                price_per_unit: form.price_per_unit,
+                total_price: form.total_price,
+            })
+            .eq('id', order.id)
+            .select()
+            .single()
+
+        if (error) {
+            console.error(error)
+            return
+        }
+
+        onSaved(data as Order)
+    }
+
+    return (
+        <div className="fixed min-h-dvh inset-0 bg-black/40 flex items-center justify-center px-4 z-50">
+            <div
+                className="bg-white w-full max-w-md rounded-2xl p-5 space-y-5 shadow-lg"
+                onClick={(e) => e.stopPropagation()}
+            >
+                {/* ===== HEADER ===== */}
+                <div className="flex items-center justify-between">
+                    <h2 className="font-semibold text-lg">Edit Order</h2>
+                    <button
+                        onClick={onClose}
+                        className="text-slate-400 hover:text-slate-600"
+                    >
+                        ✕
+                    </button>
+                </div>
+
+                {/* ===== DATA PELANGGAN ===== */}
+                <div className="space-y-3">
+                    <p className="text-sm font-semibold text-slate-600">
+                        Data Pelanggan
+                    </p>
+
+                    <div>
+                        <label className="text-xs text-slate-500">Nama Pelanggan</label>
+                        <input
+                            value={form.customer_name}
+                            onChange={(e) => updateField('customer_name', e.target.value)}
+                            className="mt-1 w-full border border-slate-300 rounded-xl px-3 py-2 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="text-xs text-slate-500">Nomor HP / WhatsApp</label>
+                        <input
+                            value={form.customer_phone}
+                            onChange={(e) => updateField('customer_phone', e.target.value)}
+                            className="mt-1 w-full border border-slate-300 rounded-xl px-3 py-2 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="text-xs text-slate-500">Catatan</label>
+                        <input
+                            value={form.note ?? ''}
+                            onChange={(e) => updateField('note', e.target.value)}
+                            className="mt-1 w-full border border-slate-300 rounded-xl px-3 py-2 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                            placeholder="Opsional"
+                        />
+                    </div>
+                </div>
+
+                {/* ===== JUMLAH ===== */}
+                <div className="space-y-3">
+                    <p className="text-sm font-semibold text-slate-600">
+                        Jumlah Laundry
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label className="text-xs text-slate-500">Berat (kg)</label>
+                            <input
+                                type="number"
+                                value={form.weight_kg ?? ''}
+                                onChange={(e) =>
+                                    updateField('weight_kg', Number(e.target.value))
+                                }
+                                className="mt-1 w-full border border-slate-300 rounded-xl px-3 py-2 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="text-xs text-slate-500">Qty (pcs)</label>
+                            <input
+                                type="number"
+                                value={form.qty ?? ''}
+                                onChange={(e) =>
+                                    updateField('qty', Number(e.target.value))
+                                }
+                                className="mt-1 w-full border border-slate-300 rounded-xl px-3 py-2 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* ===== HARGA ===== */}
+                <div className="space-y-3">
+                    <p className="text-sm font-semibold text-slate-600">
+                        Harga
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label className="text-xs text-slate-500">
+                                Harga / Unit
+                            </label>
+                            <input
+                                type="number"
+                                value={form.price_per_unit}
+                                onChange={(e) =>
+                                    updateField('price_per_unit', Number(e.target.value))
+                                }
+                                className="mt-1 w-full border border-slate-300 rounded-xl px-3 py-2 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="text-xs text-slate-500">Total</label>
+                            <input
+                                type="number"
+                                value={form.total_price}
+                                onChange={(e) =>
+                                    updateField('total_price', Number(e.target.value))
+                                }
+                                className="mt-1 w-full border border-slate-300 rounded-xl px-3 py-2 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* ===== ACTION ===== */}
+                <div className="flex justify-end gap-2 pt-4">
+                    <button
+                        onClick={onClose}
+                        className="px-4 py-2 rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-50"
+                    >
+                        Batal
+                    </button>
+                    <button
+                        onClick={handleSave}
+                        className="px-5 py-2 rounded-xl bg-blue-500 text-white hover:bg-blue-600"
+                    >
+                        Simpan Perubahan
+                    </button>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+function ConfirmDeleteModal({
+    onCancel,
+    onConfirm,
+}: {
+    onCancel: () => void
+    onConfirm: () => void
+}) {
+    return (
+        <div className="fixed min-h-dvh inset-0 bg-black/40 flex items-center justify-center px-4 z-50">
+            <div
+                className="bg-white w-full max-w-sm rounded-2xl p-5 space-y-4 shadow-lg"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <h2 className="text-lg font-semibold text-slate-800">
+                    Hapus Order
+                </h2>
+
+                <p className="text-sm text-slate-600">
+                    Apakah kamu yakin ingin menghapus order ini?
+                    Tindakan ini tidak bisa dibatalkan.
+                </p>
+
+                <div className="flex justify-end gap-2 pt-4">
+                    <button
+                        onClick={onCancel}
+                        className="px-4 py-2 rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-50"
+                    >
+                        Batal
+                    </button>
+
+                    <button
+                        onClick={onConfirm}
+                        className="px-4 py-2 rounded-xl bg-red-500 text-white hover:bg-red-600"
+                    >
+                        Hapus
                     </button>
                 </div>
             </div>
