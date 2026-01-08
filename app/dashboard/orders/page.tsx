@@ -57,31 +57,30 @@ export default function OrdersPage() {
     const [editOrder, setEditOrder] = useState<Order | null>(null)
     const [deleteOrderId, setDeleteOrderId] = useState<string | null>(null)
 
-    useEffect(() => {
-        const fetchOrders = async () => {
-            setLoading(true)
+    const fetchOrders = async () => {
+        setLoading(true)
 
-            const { data, error } = await supabase
-                .from('orders')
-                .select(`
-    *,
-    kilo_service:kilo_services ( name ),
-    satuan_item:satuan_items ( name ),
-    speed:service_speeds ( name )
-  `)
-                .order('created_at', { ascending: false })
+        const { data, error } = await supabase
+            .from('orders')
+            .select(`
+      *,
+      kilo_service:kilo_services ( name ),
+      satuan_item:satuan_items ( name ),
+      speed:service_speeds ( name )
+    `)
+            .order('created_at', { ascending: false })
 
-
-            if (error) {
-                console.error(error)
-                setLoading(false)
-                return
-            }
-
-            setOrders(data as Order[])
+        if (error) {
+            console.error(error)
             setLoading(false)
+            return
         }
 
+        setOrders(data as Order[])
+        setLoading(false)
+    }
+
+    useEffect(() => {
         fetchOrders()
     }, [])
 
@@ -256,12 +255,11 @@ Terima kasih telah menggunakan jasa kami 🙏
                 <EditOrderModal
                     order={editOrder}
                     onClose={() => setEditOrder(null)}
-                    onSaved={(updated) => {
-                        setOrders((prev) =>
-                            prev.map((o) => (o.id === updated.id ? updated : o))
-                        )
+                    onSaved={() => {
+                        fetchOrders()      // ⬅️ AMBIL DATA + RELASI LAGI
                         setEditOrder(null)
                     }}
+
                 />
             )}
 
@@ -447,12 +445,20 @@ function EditOrderModal({
                 note: form.note,
 
                 category: form.category,
-                kilo_service: form.kilo_service,
-                satuan_item: form.satuan_item,
-                speed: form.speed,
 
-                weight_kg: form.weight_kg,
-                qty: form.qty,
+                kilo_service_id:
+                    form.category === 'kilo' ? form.kilo_service_id : null,
+
+                satuan_item_id:
+                    form.category === 'satuan' ? form.satuan_item_id : null,
+
+                speed_id: form.speed_id, // ⬅️ WAJIB
+
+                weight_kg:
+                    form.category === 'kilo' ? form.weight_kg : null,
+
+                qty:
+                    form.category === 'satuan' ? form.qty : null,
 
                 base_price: form.base_price,
                 express_extra: form.express_extra,
