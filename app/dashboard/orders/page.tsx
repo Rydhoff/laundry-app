@@ -133,12 +133,21 @@ export default function OrdersPage() {
         setDeleteOrderId(null)
     }
 
+    const formatDateID = (date: string | Date) => {
+        return new Date(date).toLocaleDateString('id-ID', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+        })
+    }
+
+
     const buildWhatsappMessage = (order: Order) => {
         const service =
             order.category === 'kilo'
                 ? `${order.kilo_service?.name} - ${order.speed?.name}`
                 : `${order.satuan_item?.name} - ${order.speed?.name}`
-
 
         const qty =
             order.category === 'kilo'
@@ -155,12 +164,12 @@ WA: 08123456789
 No Order  : ${order.order_number}
 Status    : ${order.status}
 Nama      : ${order.customer_name}
-Tgl Masuk : ${order.created_at}
+Tgl Masuk : ${formatDateID(order.created_at)}
 Layanan   : ${service}
 Jumlah    : ${qty}
 Total     : Rp ${order.total_price.toLocaleString('id-ID')}
 
-Link Nota : _https://laundry-app-teal.vercel.app/dashboard/orders/${order.id}_
+Link Nota : https://laundry-app-teal.vercel.app/dashboard/orders/${order.order_number}
 
 Opsi Pembayaran:
 • Cash langsung di tempat
