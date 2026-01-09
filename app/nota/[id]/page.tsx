@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import { supabase } from '@/app/lib/supabaseClient'
+import NotaQRCode from '@/app/components/ui/NotaQRCode'
 
 type OrderStatus = 'Proses' | 'Siap' | 'Selesai'
 
@@ -18,6 +19,12 @@ type Order = {
     kilo_service?: { name: string }
     satuan_item?: { name: string }
     speed?: { name: string }
+}
+
+type Profile = {
+    laundry_name: string
+    address: string
+    phone: string
 }
 
 export default async function NotaPage({
@@ -69,8 +76,16 @@ export default async function NotaPage({
     })
 
     const formatNotaNumber = (orderNumber: number) =>
-        orderNumber.toString().padStart(4, '0')
+        orderNumber.toString().padStart(6, '0')
 
+    const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('laundry_name, address, phone')
+        .single<Profile>()
+
+    if (profileError || !profile) return notFound()
+
+    const notaUrl = `${process.env.NEXT_PUBLIC_APP_URL}/nota/${formatNotaNumber(order.order_number)}`
 
     return (
         <div className="min-h-dvh bg-slate-100 flex items-center justify-center p-4">
@@ -78,12 +93,17 @@ export default async function NotaPage({
 
                 {/* ===== HEADER ===== */}
                 <div className="bg-blue-500 text-white px-6 py-5 text-center">
-                    <h1 className="text-lg font-bold">NOTA ELEKTRONIK</h1>
-                    <p className="text-sm opacity-90 mt-1">Laundry Bersih Jaya</p>
-                    <p className="text-xs opacity-80">
-                        Jl. Merdeka No. 10 • WA 08123456789
+                    <h1 className="text-lg font-bold uppercase mb-1">{profile.laundry_name}</h1>
+
+                    <p className="text-sm opacity-80">
+                        {profile.address}
+                    </p>
+
+                    <p className="text-sm opacity-80">
+                        WhatsApp : {profile.phone}
                     </p>
                 </div>
+
 
                 {/* ===== BODY ===== */}
                 <div className="p-6 space-y-5 text-sm">
@@ -122,6 +142,10 @@ export default async function NotaPage({
                             Rp {order.total_price.toLocaleString('id-ID')}
                         </span>
                     </div>
+
+                    <Divider />
+
+                    <NotaQRCode value={notaUrl} />
 
                 </div>
             </div>

@@ -1,13 +1,18 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Banknote, LogOut, ReceiptText, Save, WashingMachine } from 'lucide-react'
+import {
+    Banknote, LogOut, ReceiptText, Save, WashingMachine, Layers, Scale, Clock,
+    Pencil,
+} from 'lucide-react'
 import { supabase } from '@/app/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
 
 export default function SettingPage() {
     const router = useRouter()
-    const [loading, setLoading] = useState(false)
+    const [loadingLogout, setLoadingLogout] = useState(false)
+    const [loadingNota, setLoadingNota] = useState(false)
+    const [loadingProfile, setLoadingProfile] = useState(false)
     const [address, setAddress] = useState('')
     const [phone, setPhone] = useState('')
     const [activeUntil, setActiveUntil] = useState('')
@@ -16,6 +21,7 @@ export default function SettingPage() {
     const [notaFooter, setNotaFooter] = useState('')
     const [profileId, setProfileId] = useState('')
     const [laundryName, setLaundryName] = useState('')
+    const [showProfileModal, setShowProfileModal] = useState(false)
 
     useEffect(() => {
         const loadSettings = async () => {
@@ -55,6 +61,7 @@ export default function SettingPage() {
     ====================== */
     const updateProfile = async () => {
         if (!profileId) return
+        setLoadingProfile(true)
 
         await supabase
             .from('profiles')
@@ -64,7 +71,10 @@ export default function SettingPage() {
                 phone,
             })
             .eq('id', profileId)
+
+        setLoadingProfile(false)
     }
+
 
     const updateWhatsappTemplate = async () => {
         if (!waTemplateId) return
@@ -74,23 +84,41 @@ export default function SettingPage() {
             .update({
                 header: notaHeader,
                 footer: notaFooter,
+                updated_at: new Date().toISOString(),
             })
             .eq('id', waTemplateId)
     }
 
+    const saveWhatsappTemplate = async () => {
+        setLoadingNota(true)
 
+        if (waTemplateId) {
+            await supabase
+                .from('whatsapp_templates')
+                .update({
+                    header: notaHeader,
+                    footer: notaFooter,
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('id', waTemplateId)
+        } else {
+            const { data } = await supabase
+                .from('whatsapp_templates')
+                .insert({
+                    header: notaHeader,
+                    footer: notaFooter,
+                })
+                .select()
+                .single()
 
+            if (data) setWaTemplateId(data.id)
+        }
 
-
-
-
-    const handleSave = () => {
-        alert('Pengaturan berhasil disimpan')
-        // nanti: update ke Supabase
+        setLoadingNota(false)
     }
 
     const handleLogout = async () => {
-        setLoading(true)
+        setLoadingLogout(true)
         await supabase.auth.signOut()
         router.replace('/login')
     }
@@ -106,19 +134,54 @@ export default function SettingPage() {
           PROFIL LAUNDRY
       ====================== */}
             <Section title="Profil Laundry">
+
                 <Field label="Nama">
-                    <input className="block py-1 focus:outline-none" value={laundryName} onChange={(e) => setLaundryName(e.target.value)} />
+                    <p className="text-sm">{laundryName}&nbsp;</p>
                 </Field>
 
                 <Field label="Alamat">
-                    <input className="block py-1 focus:outline-none" value={address} onChange={(e) => setAddress(e.target.value)} />
+                    <p className="text-sm">{address}&nbsp;</p>
                 </Field>
 
-                <Field label="No. Telp">
-                    <input className="block py-1 focus:outline-none" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                <Field label="No. Telepon">
+                    <p className="text-sm">{phone}&nbsp;</p>
                 </Field>
-                <p className="mt-4 mb-2 bg-white text-xs w-fit text-blue-500 px-2 py-1 border border-blue-500 rounded-full">Aktif sampai {new Date(activeUntil).toLocaleDateString('id-ID')}</p>
+
+                {activeUntil ? <p className="absolute top-1 right-4 mt-4 mb-2 bg-white text-xs w-fit text-blue-500 px-2 py-1 border border-blue-500 rounded-full">Aktif sampai {activeUntil}</p> : ""}
+
+                <button
+                    onClick={() => setShowProfileModal(true)}
+                    className="p-2 rounded-full text-white bg-blue-500 hover:bg-blue-600 absolute right-4 bottom-4 active:scale-95"
+                >
+                    <Pencil size={18} />
+                </button>
             </Section>
+
+            <Section title="Layanan & Harga">
+                <div className="grid grid-cols-1 gap-3">
+                    <ServiceTab
+                        title="Kategori Layanan"
+                        description="Kelola kategori kiloan / satuan"
+                        icon={<Layers size={18} />}
+                        onClick={() => router.push('/dashboard/setting/services/categories')}
+                    />
+
+                    <ServiceTab
+                        title="Jenis Layanan"
+                        description="Kelola jenis layanan & harga"
+                        icon={<Scale size={18} />}
+                        onClick={() => router.push('/dashboard/setting/services/types')}
+                    />
+
+                    <ServiceTab
+                        title="Kecepatan Layanan"
+                        description="Reguler, express, dll"
+                        icon={<Clock size={18} />}
+                        onClick={() => router.push('/dashboard/setting/services/speeds')}
+                    />
+                </div>
+            </Section>
+
 
             {/* ======================
           NOTA WHATSAPP
@@ -127,7 +190,8 @@ export default function SettingPage() {
                 <Field label="Header Nota">
                     <textarea
                         rows={6}
-                        placeholder={`**NOTA ELEKTRONIK**
+                        placeholder={`Contoh:
+**NOTA ELEKTRONIK**
 
 **Laundry Bersih Jaya**
 Jl. Merdeka No. 10
@@ -155,7 +219,8 @@ WA: 08123456789`}
                 <Field label="Footer Nota">
                     <textarea
                         rows={10}
-                        placeholder={`**Opsi Pembayaran:**
+                        placeholder={`Contoh:
+**Opsi Pembayaran:**
 
 1. Cash langsung di tempat
 2. Transfer Bank (BNI, BCA, Mandiri)
@@ -170,26 +235,100 @@ Terima kasih 🙏`}
                     />
                 </Field>
 
-
                 <button
-                    onClick={handleSave}
-                    className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-2xl font-semibold flex items-center justify-center gap-2"
+                    onClick={saveWhatsappTemplate}
+                    disabled={loadingNota}
+                    className="w-full bg-blue-500 hover:bg-blue-600 disabled:opacity-60
+    text-white py-3 rounded-2xl font-semibold flex items-center justify-center gap-2"
                 >
                     <ReceiptText size={24} />
-                    Update Nota
+                    {loadingNota ? 'Menyimpan...' : 'Update Nota'}
                 </button>
             </Section>
 
             {/* ===== LOGOUT ===== */}
             <button
                 onClick={handleLogout}
-                disabled={loading}
+                disabled={loadingLogout}
                 className="w-full mt-4 bg-red-500 hover:bg-red-600 disabled:opacity-60
-        text-white py-3 rounded-2xl font-semibold flex items-center justify-center gap-2"
+    text-white py-3 rounded-2xl font-semibold flex items-center justify-center gap-2"
             >
                 <LogOut size={18} />
-                {loading ? 'Logging out...' : 'Logout'}
+                {loadingLogout ? 'Logging out...' : 'Logout'}
             </button>
+
+
+            {showProfileModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+                    <div className="bg-white rounded-2xl p-6 w-full max-w-md space-y-2 shadow-lg">
+                        <h3 className="text-lg font-bold text-slate-800">
+                            Edit Profil Laundry
+                        </h3>
+
+                        {/* NAMA */}
+                        <div className="">
+                            <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                                Nama Laundry
+                            </label>
+                            <input
+                                value={laundryName}
+                                onChange={(e) => setLaundryName(e.target.value)}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm
+                    focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                        </div>
+
+                        {/* ALAMAT */}
+                        <div className="">
+                            <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                                Alamat
+                            </label>
+                            <textarea
+                                rows={2}
+                                value={address}
+                                onChange={(e) => setAddress(e.target.value)}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm
+                    focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                        </div>
+
+                        {/* TELEPON */}
+                        <div className="">
+                            <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                                No. Telepon
+                            </label>
+                            <input
+                                value={phone}
+                                onChange={(e) => setPhone(e.target.value)}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm
+                    focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                        </div>
+
+                        {/* ACTION */}
+                        <div className="flex justify-end gap-2 pt-4">
+                            <button
+                                onClick={() => setShowProfileModal(false)}
+                                className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100"
+                            >
+                                Batal
+                            </button>
+
+                            <button
+                                disabled={loadingProfile}
+                                onClick={async () => {
+                                    await updateProfile()
+                                    setShowProfileModal(false)
+                                }}
+                                className="px-4 py-2 rounded-xl bg-blue-500 hover:bg-blue-600 disabled:opacity-60 text-white"
+                            >
+                                {loadingProfile ? 'Menyimpan...' : 'Simpan'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </div>
     )
 }
@@ -206,7 +345,7 @@ function Section({
     children: React.ReactNode
 }) {
     return (
-        <div className="bg-white rounded-2xl p-5 shadow-sm space-y-2">
+        <div className="bg-white rounded-2xl p-5 shadow-sm space-y-2 relative">
             <h2 className="text-md font-bold text-slate-800">
                 {title}
             </h2>
@@ -229,5 +368,38 @@ function Field({
             </label>
             {children}
         </div>
+    )
+}
+
+function ServiceTab({
+    title,
+    description,
+    icon,
+    onClick,
+}: {
+    title: string
+    description: string
+    icon: React.ReactNode
+    onClick: () => void
+}) {
+    return (
+        <button
+            onClick={onClick}
+            className="w-full text-left bg-slate-50 hover:bg-blue-50
+            border border-slate-200 hover:border-blue-300
+            rounded-2xl p-4 transition
+            flex items-center gap-4"
+        >
+            {/* ICON */}
+            <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                {icon}
+            </div>
+
+            {/* TEXT */}
+            <div>
+                <p className="font-semibold text-slate-800">{title}</p>
+                <p className="text-sm text-slate-500">{description}</p>
+            </div>
+        </button>
     )
 }

@@ -56,6 +56,13 @@ export default function OrdersPage() {
     const [loading, setLoading] = useState(true)
     const [editOrder, setEditOrder] = useState<Order | null>(null)
     const [deleteOrderId, setDeleteOrderId] = useState<string | null>(null)
+    const [waHeader, setWaHeader] = useState('')
+    const [waFooter, setWaFooter] = useState('')
+    const [profile, setProfile] = useState<{
+        laundry_name: string
+        address: string
+        phone: string
+    } | null>(null)
 
     const fetchOrders = async () => {
         setLoading(true)
@@ -80,11 +87,29 @@ export default function OrdersPage() {
         setLoading(false)
     }
 
+    const fetchMeta = async () => {
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('laundry_name, address, phone')
+            .single()
+
+        const { data: wa } = await supabase
+            .from('whatsapp_templates')
+            .select('header, footer')
+            .single()
+
+        if (profile) setProfile(profile)
+        if (wa) {
+            setWaHeader(wa.header || '')
+            setWaFooter(wa.footer || '')
+        }
+    }
+
     useEffect(() => {
         fetchOrders()
+        fetchOrders()
+        fetchMeta()
     }, [])
-
-
 
     const filteredOrders = orders.filter((o) => {
         const byStatus = filter === 'all' || o.status === filter
@@ -143,6 +168,8 @@ export default function OrdersPage() {
 
 
     const buildWhatsappMessage = (order: Order) => {
+        if (!profile) return ''
+
         const service =
             order.category === 'kilo'
                 ? `${order.kilo_service?.name} - ${order.speed?.name}`
@@ -153,47 +180,38 @@ export default function OrdersPage() {
                 ? `${order.weight_kg} Kg`
                 : `${order.qty} Pcs`
 
+        const notaUrl = `${process.env.NEXT_PUBLIC_APP_URL}/nota/${order.order_number}`
+
         return `
-*NOTA LAUNDRY*
+${waHeader}
 
-*Laundry Bersih Jaya*
-Jl. Merdeka No. 10
-WA: 08123456789
-
-No Order : ${order.order_number}
+No. Nota : ${order.order_number}
 Status : ${order.status}
 Nama : ${order.customer_name}
-Tgl Masuk : ${formatDateID(order.created_at)}
+Tanggal Masuk : ${formatDateID(order.created_at)}
 Layanan : ${service}
 Jumlah : ${qty}
 Total : Rp ${order.total_price.toLocaleString('id-ID')}
 
-Link Nota : https://laundry-app-teal.vercel.app/nota/${order.order_number}
+Link Nota :
+${notaUrl}
 
-Opsi Pembayaran:
-• Cash langsung di tempat
-• Transfer Bank BCA (08123456789)
-• Dana (08123456789)
-
-Terima kasih telah menggunakan jasa kami 🙏
-  `.trim()
+${waFooter}
+    `.trim()
     }
 
     const sendWhatsapp = (order: Order) => {
         const phone = order.customer_phone.replace(/[^0-9]/g, '')
-
-        // convert 08xxx → 628xxx
         const waNumber = phone.startsWith('0')
             ? '62' + phone.slice(1)
             : phone
 
         const message = buildWhatsappMessage(order)
-        const url = `https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`
+        const safeMessage = message.normalize('NFC')
 
+        const url = `https://wa.me/${waNumber}?text=${encodeURIComponent(safeMessage)}`
         window.open(url, '_blank')
     }
-
-
 
     return (
         <div className="space-y-5">

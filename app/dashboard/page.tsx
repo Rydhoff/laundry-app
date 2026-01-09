@@ -44,6 +44,7 @@ export default function DashboardPage() {
                 .gte('created_at', startOfDay.toISOString())
                 .lte('created_at', endOfDay.toISOString())
 
+            console.log(data)
             if (error) {
                 console.error(error)
                 setLoading(false)
