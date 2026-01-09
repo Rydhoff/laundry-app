@@ -97,6 +97,13 @@ export default function SpeedsPage() {
         ])
     }
 
+    const toggleActive = async (id: string, value: boolean) => {
+        await supabase
+            .from('service_speeds')
+            .update({ is_active: value })
+            .eq('id', id)
+    }
+
     return (
         <div className="space-y-4">
             {/* ===== HEADER ===== */}
@@ -129,6 +136,7 @@ export default function SpeedsPage() {
                     <FormRow
                         key={item.id || i}
                         item={item}
+                        toggleActive={toggleActive}   // ⬅️ TAMBAH
                         onChange={(newItem) => {
                             const copy = [...data]
                             copy[i] = newItem
@@ -137,6 +145,7 @@ export default function SpeedsPage() {
                         onSave={() => save(item)}
                         onDelete={() => requestDelete(item.id)}
                     />
+
                 ))}
             </div>
 
@@ -193,11 +202,13 @@ function FormRow({
     onChange,
     onSave,
     onDelete,
+    toggleActive,
 }: {
     item: Speed
     onChange: (item: Speed) => void
     onSave: () => void
     onDelete: () => void
+    toggleActive: (id: string, value: boolean) => Promise<void>
 }) {
     return (
         <div className="space-y-3 border border-slate-200 hover:border-blue-300 rounded-xl p-5 transition">
@@ -260,12 +271,16 @@ function FormRow({
                         type="checkbox"
                         className="sr-only peer"
                         checked={item.is_active}
-                        onChange={(e) =>
-                            onChange({
-                                ...item,
-                                is_active: e.target.checked,
-                            })
-                        }
+                        onChange={async (e) => {
+                            const value = e.target.checked
+
+                            // optimistic UI
+                            onChange({ ...item, is_active: value })
+
+                            if (item.id) {
+                                await toggleActive(item.id, value)
+                            }
+                        }}
                     />
                     <div className="w-11 h-6 bg-slate-300 rounded-full peer peer-checked:bg-blue-500 transition" />
                     <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full peer-checked:translate-x-5 transition" />

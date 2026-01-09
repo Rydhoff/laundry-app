@@ -62,6 +62,39 @@ export default function NewOrderPage() {
     const [weight, setWeight] = useState(1)
     const [qty, setQty] = useState(1)
 
+    const [activeUntil, setActiveUntil] = useState<Date | null>(null)
+    const [checkingSub, setCheckingSub] = useState(true)
+
+    useEffect(() => {
+        const checkSubscription = async () => {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('active_until')
+                .single()
+
+            if (error) {
+                console.error(error)
+                setCheckingSub(false)
+                return
+            }
+
+            const isActive =
+                data?.active_until &&
+                new Date() <= new Date(data.active_until)
+
+            if (!isActive) {
+                // 🔴 LANGSUNG TENDANG BALIK
+                router.replace('/dashboard')
+                return
+            }
+
+            setActiveUntil(new Date(data.active_until))
+            setCheckingSub(false)
+        }
+
+        checkSubscription()
+    }, [router])
+
     useEffect(() => {
         const fetchMaster = async () => {
             const { data: categories } = await supabase
@@ -124,6 +157,12 @@ export default function NewOrderPage() {
             : qty * activePrice
 
     const handleSave = async () => {
+        if (!activeUntil || new Date() > activeUntil) {
+            toast.error('Langganan Anda telah berakhir')
+            router.replace('/dashboard')
+            return
+        }
+
         if (!name || !phone) {
             toast.warning('Nama dan nomor HP wajib diisi')
             return
@@ -183,7 +222,6 @@ export default function NewOrderPage() {
     return (
         <div className="bg-slate-100">
             <main className="space-y-3 max-w-md mx-auto">
-
                 {/* ===== CUSTOMER ===== */}
                 <section className="space-y-3">
                     <h2 className="font-semibold">Data Pelanggan</h2>

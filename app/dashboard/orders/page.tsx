@@ -63,6 +63,9 @@ export default function OrdersPage() {
         address: string
         phone: string
     } | null>(null)
+    const [activeUntil, setActiveUntil] = useState<Date | null>(null)
+    const [laundryName, setLaundryName] = useState<string | null>(null)
+    const [showSubscribeModal, setShowSubscribeModal] = useState(false)
 
     const fetchOrders = async () => {
         setLoading(true)
@@ -90,8 +93,13 @@ export default function OrdersPage() {
     const fetchMeta = async () => {
         const { data: profile } = await supabase
             .from('profiles')
-            .select('laundry_name, address, phone')
+            .select('laundry_name, active_until, address, phone')
             .single()
+
+        if (profile) {
+            setLaundryName(profile.laundry_name)
+            setActiveUntil(profile.active_until ? new Date(profile.active_until) : null)
+        }
 
         const { data: wa } = await supabase
             .from('whatsapp_templates')
@@ -213,15 +221,69 @@ ${waFooter}
         window.open(url, '_blank')
     }
 
+    const isSubscriptionActive =
+        !!activeUntil && new Date() <= activeUntil
+
+
     return (
         <div className="space-y-5">
+
+            {showSubscribeModal && (
+                <div className="fixed min-h-dvh inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+                    <div className="bg-white rounded-2xl p-6 w-full max-w-md space-y-4 shadow-lg">
+                        <h3 className="text-lg font-bold text-slate-800">
+                            🔒 Langganan Berakhir
+                        </h3>
+
+                        <p className="text-sm text-slate-600">
+                            Fitur <b>Tambah Order</b> hanya tersedia untuk akun dengan langganan aktif.
+                        </p>
+
+                        {activeUntil && (
+                            <p className="text-sm text-slate-500">
+                                Masa aktif berakhir pada{' '}
+                                <b>{activeUntil.toLocaleDateString('id-ID')}</b>
+                            </p>
+                        )}
+
+                        <div className="flex gap-2 pt-4">
+                            <button
+                                onClick={() => setShowSubscribeModal(false)}
+                                className="flex-1 border border-slate-300 text-slate-700 px-4 py-2 rounded-xl"
+                            >
+                                Tutup
+                            </button>
+
+                            <a
+                                href={`https://wa.me/62895324443540?text=${encodeURIComponent(
+                                    `Halo admin 👋\n\nSaya ingin memperpanjang langganan aplikasi laundry.\n\nNama Laundry: ${laundryName}\nMasa aktif sebelumnya: ${activeUntil?.toLocaleDateString('id-ID')}`
+                                )}`}
+                                target="_blank"
+                                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white! px-4 py-2 rounded-xl text-center font-semibold"
+                            >
+                                Perpanjang
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* ===== PAGE HEADER ===== */}
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-xl font-bold">Kelola Order</h1>
                 </div>
 
-                <button onClick={() => router.push('/dashboard/orders/new')} className="bg-blue-500 hover:bg-blue-600 text-sm text-white px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-sm">
+                <button
+                    onClick={() => {
+                        if (isSubscriptionActive) {
+                            router.push('/dashboard/orders/new')
+                        } else {
+                            setShowSubscribeModal(true)
+                        }
+                    }}
+                    className="bg-blue-500 hover:bg-blue-600 text-sm text-white px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-sm"
+                >
                     <Plus size={18} />
                     Tambah Order
                 </button>

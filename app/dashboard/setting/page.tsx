@@ -22,6 +22,24 @@ export default function SettingPage() {
     const [profileId, setProfileId] = useState('')
     const [laundryName, setLaundryName] = useState('')
     const [showProfileModal, setShowProfileModal] = useState(false)
+    const today = new Date()
+    const activeDate = activeUntil ? new Date(activeUntil) : null
+
+    const daysLeft =
+        activeDate
+            ? Math.ceil(
+                (activeDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+            )
+            : null
+
+    let subscriptionStatus: 'active' | 'warning' | 'expired' = 'expired'
+
+    if (daysLeft !== null) {
+        if (daysLeft > 3) subscriptionStatus = 'active'
+        else if (daysLeft > 0) subscriptionStatus = 'warning'
+        else subscriptionStatus = 'expired'
+    }
+
 
     useEffect(() => {
         const loadSettings = async () => {
@@ -147,7 +165,14 @@ export default function SettingPage() {
                     <p className="text-sm">{phone}&nbsp;</p>
                 </Field>
 
-                {activeUntil ? <p className="absolute top-1 right-4 mt-4 mb-2 bg-white text-xs w-fit text-blue-500 px-2 py-1 border border-blue-500 rounded-full">Aktif sampai {activeUntil}</p> : ""}
+                {activeUntil && (
+                    <div className="absolute top-4 right-4">
+                        <SubscriptionBadge
+                            status={subscriptionStatus}
+                            activeUntil={activeUntil}
+                        />
+                    </div>
+                )}
 
                 <button
                     onClick={() => setShowProfileModal(true)}
@@ -401,5 +426,34 @@ function ServiceTab({
                 <p className="text-sm text-slate-500">{description}</p>
             </div>
         </button>
+    )
+}
+
+function SubscriptionBadge({
+    status,
+    activeUntil,
+}: {
+    status: 'active' | 'warning' | 'expired'
+    activeUntil: string
+}) {
+    const styles = {
+        active: 'bg-green-100 text-green-700 border-green-500',
+        warning: 'bg-yellow-100 text-yellow-700 border-yellow-500',
+        expired: 'bg-red-100 text-red-700 border-red-500',
+    }
+
+    const labels = {
+        active: 'Aktif · sampai',
+        warning: 'Hampir Habis · ',
+        expired: 'Expired · ',
+    }
+
+    return (
+        <div
+            className={`text-xs px-3 py-1 rounded-full border font-semibold ${styles[status]}`}
+        >
+            {labels[status]}{' '}
+            {new Date(activeUntil).toLocaleDateString('id-ID')}
+        </div>
     )
 }

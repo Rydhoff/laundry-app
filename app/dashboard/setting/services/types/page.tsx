@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/app/lib/supabaseClient'
-import { ArrowLeft, Plus, Save, Trash2 } from 'lucide-react'
-import { useRouter } from 'next/navigation'
+import { Plus, Save, Trash2 } from 'lucide-react'
 
 type Item = {
     id?: string
@@ -14,7 +13,6 @@ type Item = {
 }
 
 export default function TypesPage() {
-    const router = useRouter()
     const [kilo, setKilo] = useState<Item[]>([])
     const [satuan, setSatuan] = useState<Item[]>([])
     const [deleteTarget, setDeleteTarget] = useState<{
@@ -119,6 +117,17 @@ export default function TypesPage() {
         load()
     }
 
+    const toggleActive = async (
+        table: 'kilo_services' | 'satuan_items',
+        id: string,
+        value: boolean
+    ) => {
+        await supabase
+            .from(table)
+            .update({ is_active: value })
+            .eq('id', id)
+    }
+
     return (
         <div className="space-y-4">
             {/* ===== HEADER ===== */}
@@ -137,8 +146,10 @@ export default function TypesPage() {
             >
                 {kilo.map((item, i) => (
                     <FormRow
-                        key={item.id || i}
+                        table="kilo_services"
                         item={item}
+                        toggleActive={toggleActive}
+                        key={item.id || i}
                         priceLabel="Harga / Kg"
                         onChange={(newItem) => {
                             const copy = [...kilo]
@@ -159,8 +170,10 @@ export default function TypesPage() {
             >
                 {satuan.map((item, i) => (
                     <FormRow
-                        key={item.id || i}
+                        table="satuan_items"
                         item={item}
+                        toggleActive={toggleActive}
+                        key={item.id || i}
                         priceLabel="Harga / Item"
                         onChange={(newItem) => {
                             const copy = [...satuan]
@@ -251,17 +264,25 @@ function Section({
 }
 
 function FormRow({
+    table,
     item,
     priceLabel,
     onChange,
     onSave,
     onDelete,
+    toggleActive,
 }: {
+    table: 'kilo_services' | 'satuan_items'
     item: Item
     priceLabel: string
     onChange: (item: Item) => void
     onSave: () => void
     onDelete: () => void
+    toggleActive: (
+        table: 'kilo_services' | 'satuan_items',
+        id: string,
+        value: boolean
+    ) => Promise<void>
 }) {
     return (
         <div className="space-y-3 border border-slate-200 hover:border-blue-300 rounded-xl p-5 transition">
@@ -305,12 +326,21 @@ function FormRow({
                         type="checkbox"
                         className="sr-only peer"
                         checked={item.is_active}
-                        onChange={(e) =>
+                        onChange={async (e) => {
+                            const value = e.target.checked
                             onChange({
                                 ...item,
-                                is_active: e.target.checked,
+                                is_active: value,
                             })
-                        }
+
+                            if (item.id) {
+                                await toggleActive(
+                                    table,
+                                    item.id,
+                                    value
+                                )
+                            }
+                        }}
                     />
                     <div className="w-11 h-6 bg-slate-300 rounded-full peer peer-checked:bg-blue-500 transition" />
                     <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full peer-checked:translate-x-5 transition" />
