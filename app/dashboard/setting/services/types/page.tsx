@@ -33,9 +33,27 @@ export default function TypesPage() {
             .order('created_at')
 
         if (kiloRes.data && satuanRes.data) {
-            setKilo(kiloRes.data)
-            setSatuan(satuanRes.data)
+            setKilo(
+                kiloRes.data.map((i) => ({
+                    id: i.id,
+                    name: i.name,
+                    description: i.description || '',
+                    price: i.price_per_kg,   // ✅ MAP KE price
+                    is_active: i.is_active,
+                }))
+            )
+
+            setSatuan(
+                satuanRes.data.map((i) => ({
+                    id: i.id,
+                    name: i.name,
+                    description: i.description || '',
+                    price: i.price_per_item, // ✅ MAP KE price
+                    is_active: i.is_active,
+                }))
+            )
         }
+
     }
 
     useEffect(() => {
