@@ -353,7 +353,7 @@ ${waFooter}
             )}
 
             {/* ===== ORDER LIST ===== */}
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {filteredOrders.map((order) => (
                     <OrderCard key={order.id} order={order} onUpdateStatus={updateStatus} onEdit={() => setEditOrder(order)} onDelete={() => setDeleteOrderId(order.id)} onSendNota={() => sendWhatsapp(order)} />
                 ))}
