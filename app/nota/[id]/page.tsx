@@ -147,6 +147,11 @@ export default async function NotaPage({
 
                     <NotaQRCode value={notaUrl} />
 
+                    {/* 🔹 BRAND WASHBASE */}
+                    <p className="text-[11px] text-slate-600 text-center mt-4">
+                        Nota digital dibuat otomatis oleh <span className="font-medium">WashBase</span>
+                    </p>
+
                 </div>
             </div>
         </div>

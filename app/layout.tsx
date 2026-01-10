@@ -4,7 +4,7 @@ import '@/app/globals.css';
 import { Toaster } from 'sonner';
 
 export const metadata: Metadata = {
-  title: 'Laundry App',
+  title: 'WashBase',
   description: 'Laundry Management App',
   manifest: '/manifest.json'
 }

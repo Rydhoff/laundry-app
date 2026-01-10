@@ -268,6 +268,9 @@ Terima kasih 🙏`}
                 {loadingLogout ? 'Logging out...' : 'Logout'}
             </button>
 
+            <p className="text-[11px] text-slate-400 text-center mt-6">
+                WashBase – Fast & Paperless Laundry System
+            </p>
 
             {showProfileModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">

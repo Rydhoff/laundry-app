@@ -50,9 +50,12 @@ export default function LoginPage() {
                 < h1 className="text-2xl font-bold text-center" >
                     Admin Portal
                 </h1 >
-                <p className="text-sm text-slate-400 text-center mt-1 mb-6">
-                    Kelola pesanan dan layanan dengan mudah.
+
+                {/* 🔹 BRAND WASHBASE */}
+                <p className="text-xs text-slate-400 text-center mt-2 mb-4">
+                    Fast & Paperless Laundry System by <span className="font-medium">WashBase</span>
                 </p>
+
                 <form onSubmit={(e) => e.preventDefault()}>
                     {/* Email */}
                     <div className="mb-4">
@@ -62,7 +65,7 @@ export default function LoginPage() {
                             <input
                                 id="email"
                                 type="email"
-                                placeholder="admin@laundry.app"
+                                placeholder="admin@washbase.app"
                                 className="w-full pl-10 pr-3 py-2.5 border border-slate-400 bg-white rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
@@ -104,7 +107,7 @@ export default function LoginPage() {
                 </form>
                 {/* Footer */}
                 <p className="text-xs text-slate-400 text-center mt-8">
-                    Version 1.0.0 • Laundry App
+                    Version 1.0.0 • Powered by <span className="font-medium">WashBase</span>
                 </p>
             </div >
         </div >

@@ -1,7 +1,7 @@
 {
-    "name": "Laundry App",
-    "short_name": "Laundry",
-    "description": "Laundry Management App",
+    "name": "WashBase",
+    "short_name": "WashBase",
+    "description": "Fast & Paperless Laundry Management System",
     "start_url": "/dashboard",
     "display": "standalone",
     "background_color": "#ffffff",
