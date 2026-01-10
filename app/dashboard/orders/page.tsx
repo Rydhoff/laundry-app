@@ -7,7 +7,8 @@ import {
     ReceiptText,
     Pencil,
     Trash2,
-    MessageSquareShare
+    MessageSquareShare,
+    Loader
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -230,6 +231,12 @@ ${waFooter}
     const isSubscriptionActive =
         !!activeUntil && new Date() <= activeUntil
 
+    const isCheckingSubscription =
+        loading || activeUntil === null
+
+    const isAddOrderDisabled =
+        isCheckingSubscription || !isSubscriptionActive
+
 
     return (
         <div className="space-y-5">
@@ -282,16 +289,30 @@ ${waFooter}
 
                 <button
                     onClick={() => {
-                        if (isSubscriptionActive) {
-                            router.push('/dashboard/orders/new')
-                        } else {
+                        if (!isSubscriptionActive) {
                             setShowSubscribeModal(true)
+                            return
                         }
+                        router.push('/dashboard/orders/new')
                     }}
-                    className="bg-blue-500 hover:bg-blue-600 text-sm text-white px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-sm"
+                    className={`text-sm px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-sm transition 
+        ${isAddOrderDisabled
+                            ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                            : 'text-white bg-blue-500 hover:bg-blue-600'
+                        }
+    `}
                 >
-                    <Plus size={18} />
-                    Tambah Order
+                    {isCheckingSubscription ? (
+                        <>
+                            <Loader size={16} className="animate-spin" />
+                            Mengecek...
+                        </>
+                    ) : (
+                        <>
+                            <Plus size={18} />
+                            Tambah Order
+                        </>
+                    )}
                 </button>
             </div>
 

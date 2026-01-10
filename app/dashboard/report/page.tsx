@@ -52,7 +52,7 @@ type ServiceTopItem = {
 }
 
 export default function ReportPage() {
-    const [period, setPeriod] = useState<Period>('week')
+    const [period, setPeriod] = useState<Period>('month')
     const [startDate, setStartDate] = useState('')
     const [endDate, setEndDate] = useState('')
     const [orders, setOrders] = useState<Order[]>([])
@@ -424,7 +424,7 @@ export default function ReportPage() {
                 />
                 <SummaryCard
                     title="Total Berat"
-                    value={`${summary.totalWeight} kg`}
+                    value={`${summary.totalWeight.toFixed(1)} kg`}
                     icon={<Weight size={20} />}
                     color="text-green-600"
                     bg="bg-green-100"

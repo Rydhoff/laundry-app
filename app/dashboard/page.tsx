@@ -118,6 +118,11 @@ export default function DashboardPage() {
     const isSubscriptionActive =
         !!activeUntil && new Date() <= activeUntil
 
+    const isCheckingSubscription = loading || activeUntil === null
+
+    const isAddOrderDisabled =
+        isCheckingSubscription || !isSubscriptionActive
+
     const waLink = `https://wa.me/62895324443540?text=${encodeURIComponent(
         `Halo admin 👋\n\nSaya ingin memperpanjang langganan aplikasi laundry.\n\nNama Laundry: ${laundryName}\nMasa aktif sebelumnya: ${activeUntil?.toLocaleDateString('id-ID')}`
     )}`
@@ -251,17 +256,32 @@ export default function DashboardPage() {
             {/* ===== TAMBAH ORDER ===== */}
             <button
                 onClick={() => {
-                    if (isSubscriptionActive) {
-                        router.push('/dashboard/orders/new')
-                    } else {
+                    if (!isSubscriptionActive) {
                         setShowSubscribeModal(true)
+                        return
                     }
+                    router.push('/dashboard/orders/new')
                 }}
-                className="w-full bg-blue-500 hover:bg-blue-600 text-white py-4 rounded-2xl font-semibold flex items-center justify-center gap-2 shadow-md"
+                className={`w-full py-4 rounded-2xl font-semibold flex items-center justify-center gap-2 shadow-md transition
+        ${isAddOrderDisabled
+                        ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                        : 'bg-blue-500 hover:bg-blue-600 text-white'
+                    }
+    `}
             >
-                <Plus size={22} />
-                Tambah Order Baru
+                {isCheckingSubscription ? (
+                    <>
+                        <Loader className="animate-spin" size={22} />
+                        Mengecek langganan...
+                    </>
+                ) : (
+                    <>
+                        <Plus size={22} />
+                        Tambah Order Baru
+                    </>
+                )}
             </button>
+
         </>
     )
 }
