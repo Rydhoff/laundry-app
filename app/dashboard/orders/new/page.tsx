@@ -63,7 +63,6 @@ export default function NewOrderPage() {
     const [qty, setQty] = useState(1)
 
     const [activeUntil, setActiveUntil] = useState<Date | null>(null)
-    const [checkingSub, setCheckingSub] = useState(true)
 
     useEffect(() => {
         const checkSubscription = async () => {
@@ -74,7 +73,6 @@ export default function NewOrderPage() {
 
             if (error) {
                 console.error(error)
-                setCheckingSub(false)
                 return
             }
 
@@ -89,7 +87,6 @@ export default function NewOrderPage() {
             }
 
             setActiveUntil(new Date(data.active_until))
-            setCheckingSub(false)
         }
 
         checkSubscription()
@@ -113,31 +110,40 @@ export default function NewOrderPage() {
                 .select('*')
                 .eq('is_active', true)
 
-            const { data: speeds } = await supabase
-                .from('service_speeds')
-                .select('*')
-                .eq('is_active', true)
-
             setCategories(categories || [])
             setKiloServices(kilo || [])
             setSatuanItems(satuan || [])
-            setSpeeds(speeds || [])
 
             if (categories?.length) setCategory(categories[0])
             if (kilo?.length) setKiloService(kilo[0])
             if (satuan?.length) setSatuanItem(satuan[0])
-            if (speeds?.length) setSpeed(speeds[0])
         }
 
         fetchMaster()
     }, [])
 
     useEffect(() => {
-        if (!speed && speeds.length > 0) {
-            setSpeed(speeds[0])
-        }
-    }, [category, speeds])
+        async function fetchSpeeds() {
+            const { data, error } = await supabase
+                .from('service_speeds')
+                .select('*')
+                .eq('is_active', true)
 
+            if (error) {
+                console.error(error)
+                return
+            }
+
+            setSpeeds(data ?? [])
+
+            // set default speed
+            if (!speed && data && data.length > 0) {
+                setSpeed(data[0])
+            }
+        }
+
+        fetchSpeeds()
+    }, [speed])
 
     const basePrice =
         category?.code === 'kilo'

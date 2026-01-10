@@ -14,10 +14,6 @@ export default function CategoriesPage() {
         satuan: true,
     })
 
-    useEffect(() => {
-        load()
-    }, [])
-
     const load = async () => {
         const { data } = await supabase
             .from('service_categories')
@@ -37,6 +33,13 @@ export default function CategoriesPage() {
 
         setStatus(next)
     }
+
+    useEffect(() => {
+        const run = async () => {
+            await load()
+        }
+        run()
+    }, [])
 
     const toggle = async (code: 'kilo' | 'satuan') => {
         const newValue = !status[code]

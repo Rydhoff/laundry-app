@@ -20,39 +20,30 @@ export default function TypesPage() {
         id: string
     } | null>(null)
 
-
-    useEffect(() => {
-        load()
-    }, [])
-
+    // 1️⃣ FUNCTION LOAD (ASYNC, TANPA HOOK)
     const load = async () => {
-        const kiloRes = await supabase.from('kilo_services').select('*').order('created_at')
-        const satuanRes = await supabase.from('satuan_items').select('*').order('created_at')
+        const kiloRes = await supabase
+            .from('kilo_services')
+            .select('*')
+            .order('created_at')
 
-        if (kiloRes.data) {
-            setKilo(
-                kiloRes.data.map((i) => ({
-                    id: i.id,
-                    name: i.name,
-                    description: i.description || '',
-                    price: i.price_per_kg,
-                    is_active: i.is_active,
-                }))
-            )
-        }
+        const satuanRes = await supabase
+            .from('satuan_items')
+            .select('*')
+            .order('created_at')
 
-        if (satuanRes.data) {
-            setSatuan(
-                satuanRes.data.map((i) => ({
-                    id: i.id,
-                    name: i.name,
-                    description: i.description || '',
-                    price: i.price_per_item,
-                    is_active: i.is_active,
-                }))
-            )
+        if (kiloRes.data && satuanRes.data) {
+            setKilo(kiloRes.data)
+            setSatuan(satuanRes.data)
         }
     }
+
+    useEffect(() => {
+        const run = async () => {
+            await load()
+        }
+        run()
+    }, [])
 
     /* ================= CRUD ================= */
 
@@ -93,8 +84,10 @@ export default function TypesPage() {
     }
 
 
-    const addNew = (setter: any) => {
-        setter((prev: Item[]) => [
+    const addNew = (
+        setter: React.Dispatch<React.SetStateAction<Item[]>>
+    ) => {
+        setter((prev) => [
             {
                 name: '',
                 description: '',
@@ -104,6 +97,7 @@ export default function TypesPage() {
             ...prev,
         ])
     }
+
 
     const confirmDelete = async () => {
         if (!deleteTarget) return

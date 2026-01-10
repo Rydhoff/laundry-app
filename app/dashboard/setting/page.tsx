@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import {
-    Banknote, LogOut, ReceiptText, Save, WashingMachine, Layers, Scale, Clock,
+    LogOut, ReceiptText, Layers, Scale, Clock,
     Pencil,
 } from 'lucide-react'
 import { supabase } from '@/app/lib/supabaseClient'
@@ -91,20 +91,6 @@ export default function SettingPage() {
             .eq('id', profileId)
 
         setLoadingProfile(false)
-    }
-
-
-    const updateWhatsappTemplate = async () => {
-        if (!waTemplateId) return
-
-        await supabase
-            .from('whatsapp_templates')
-            .update({
-                header: notaHeader,
-                footer: notaFooter,
-                updated_at: new Date().toISOString(),
-            })
-            .eq('id', waTemplateId)
     }
 
     const saveWhatsappTemplate = async () => {

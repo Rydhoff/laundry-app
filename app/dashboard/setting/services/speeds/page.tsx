@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/app/lib/supabaseClient'
-import { ArrowLeft, Plus, Save, Trash2 } from 'lucide-react'
-import { useRouter } from 'next/navigation'
+import { Plus, Save, Trash2 } from 'lucide-react'
 
 type Speed = {
     id?: string
@@ -15,13 +14,8 @@ type Speed = {
 }
 
 export default function SpeedsPage() {
-    const router = useRouter()
     const [data, setData] = useState<Speed[]>([])
     const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
-
-    useEffect(() => {
-        load()
-    }, [])
 
     const load = async () => {
         const { data } = await supabase
@@ -42,6 +36,13 @@ export default function SpeedsPage() {
             )
         }
     }
+    useEffect(() => {
+        const run = async () => {
+            await load()
+        }
+        run()
+    }, [])
+
 
     /* ================= CRUD ================= */
 

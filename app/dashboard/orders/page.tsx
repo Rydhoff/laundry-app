@@ -47,6 +47,12 @@ type Order = {
     created_at: string
 }
 
+const statusFilters: { key: 'all' | OrderStatus; label: string }[] = [
+    { key: 'all', label: 'Semua' },
+    { key: 'Proses', label: 'Proses' },
+    { key: 'Siap', label: 'Siap' },
+    { key: 'Selesai', label: 'Selesai' },
+]
 
 export default function OrdersPage() {
     const [filter, setFilter] = useState<'all' | OrderStatus>('all')
@@ -67,56 +73,56 @@ export default function OrdersPage() {
     const [laundryName, setLaundryName] = useState<string | null>(null)
     const [showSubscribeModal, setShowSubscribeModal] = useState(false)
 
-    const fetchOrders = async () => {
-        setLoading(true)
-
-        const { data, error } = await supabase
-            .from('orders')
-            .select(`
-      *,
-      kilo_service:kilo_services ( name ),
-      satuan_item:satuan_items ( name ),
-      speed:service_speeds ( name )
-    `)
-            .order('created_at', { ascending: false })
-
-        if (error) {
-            console.error(error)
-            setLoading(false)
-            return
-        }
-
-        setOrders(data as Order[])
-        setLoading(false)
-    }
-
-    const fetchMeta = async () => {
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('laundry_name, active_until, address, phone')
-            .single()
-
-        if (profile) {
-            setLaundryName(profile.laundry_name)
-            setActiveUntil(profile.active_until ? new Date(profile.active_until) : null)
-        }
-
-        const { data: wa } = await supabase
-            .from('whatsapp_templates')
-            .select('header, footer')
-            .single()
-
-        if (profile) setProfile(profile)
-        if (wa) {
-            setWaHeader(wa.header || '')
-            setWaFooter(wa.footer || '')
-        }
-    }
-
     useEffect(() => {
-        fetchOrders()
-        fetchOrders()
-        fetchMeta()
+        async function load() {
+            setLoading(true)
+
+            // ===== ORDERS =====
+            const { data: ordersData, error: ordersError } = await supabase
+                .from('orders')
+                .select(`
+                *,
+                kilo_service:kilo_services ( name ),
+                satuan_item:satuan_items ( name ),
+                speed:service_speeds ( name )
+            `)
+                .order('created_at', { ascending: false })
+
+            if (!ordersError && ordersData) {
+                setOrders(ordersData)
+            }
+
+            setLoading(false)
+
+            // ===== PROFILE =====
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('laundry_name, active_until, address, phone')
+                .single()
+
+            if (profile) {
+                setLaundryName(profile.laundry_name)
+                setActiveUntil(
+                    profile.active_until
+                        ? new Date(profile.active_until)
+                        : null
+                )
+                setProfile(profile)
+            }
+
+            // ===== WHATSAPP TEMPLATE =====
+            const { data: wa } = await supabase
+                .from('whatsapp_templates')
+                .select('header, footer')
+                .single()
+
+            if (wa) {
+                setWaHeader(wa.header || '')
+                setWaFooter(wa.footer || '')
+            }
+        }
+
+        load()
     }, [])
 
     const filteredOrders = orders.filter((o) => {
@@ -305,15 +311,10 @@ ${waFooter}
 
             {/* ===== FILTER ===== */}
             <div className="flex justify-between overflow-x-auto pb-1">
-                {[
-                    { key: 'all', label: 'Semua' },
-                    { key: 'Proses', label: 'Proses' },
-                    { key: 'Siap', label: 'Siap' },
-                    { key: 'Selesai', label: 'Selesai' },
-                ].map((item) => (
+                {statusFilters.map((item) => (
                     <button
                         key={item.key}
-                        onClick={() => setFilter(item.key as any)}
+                        onClick={() => setFilter(item.key)}
                         className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition
               ${filter === item.key
                                 ? 'bg-white border border-blue-500 text-blue-500'
@@ -335,11 +336,12 @@ ${waFooter}
                 <EditOrderModal
                     order={editOrder}
                     onClose={() => setEditOrder(null)}
-                    onSaved={() => {
-                        fetchOrders()      // ⬅️ AMBIL DATA + RELASI LAGI
+                    onSaved={(updated) => {
+                        setOrders((prev) =>
+                            prev.map((o) => (o.id === updated.id ? updated : o))
+                        )
                         setEditOrder(null)
                     }}
-
                 />
             )}
 
@@ -512,7 +514,7 @@ function EditOrderModal({
 }) {
     const [form, setForm] = useState({ ...order })
 
-    const updateField = (key: keyof Order, value: any) => {
+    const updateField = <K extends keyof Order>(key: K, value: Order[K]) => {
         setForm((p) => ({ ...p, [key]: value }))
     }
 

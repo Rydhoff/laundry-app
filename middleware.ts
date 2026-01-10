@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
 export async function middleware(req: NextRequest) {
-    let response = NextResponse.next()
+    const response = NextResponse.next()
 
     const supabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,9 +13,13 @@ export async function middleware(req: NextRequest) {
                 get(name: string) {
                     return req.cookies.get(name)?.value
                 },
+
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 set(name: string, value: string, options: any) {
                     response.cookies.set({ name, value, ...options })
                 },
+
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 remove(name: string, options: any) {
                     response.cookies.set({ name, value: '', ...options })
                 },

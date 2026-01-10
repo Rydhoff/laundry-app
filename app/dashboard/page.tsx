@@ -35,34 +35,45 @@ export default function DashboardPage() {
         const fetchDashboard = async () => {
             setLoading(true)
 
+            // ===== 1️⃣ HARI INI =====
             const startOfDay = new Date()
             startOfDay.setHours(0, 0, 0, 0)
 
             const endOfDay = new Date()
             endOfDay.setHours(23, 59, 59, 999)
 
-            const { data, error } = await supabase
+            const { data: todayData, error: todayError } = await supabase
                 .from('orders')
-                .select('total_price, status')
+                .select('total_price')
                 .gte('created_at', startOfDay.toISOString())
                 .lte('created_at', endOfDay.toISOString())
 
-
-            if (error) {
-                console.error(error)
+            if (todayError) {
+                console.error(todayError)
                 setLoading(false)
                 return
             }
 
-            const income = data.reduce((sum, o) => sum + o.total_price, 0)
+            setIncomeToday(
+                todayData.reduce((sum, o) => sum + o.total_price, 0)
+            )
+            setTotalToday(todayData.length)
 
-            setIncomeToday(income)
-            setTotalToday(data.length)
+            // ===== 2️⃣ STATUS SEMUA DATA =====
+            const { data: statusData, error: statusError } = await supabase
+                .from('orders')
+                .select('status')
+
+            if (statusError) {
+                console.error(statusError)
+                setLoading(false)
+                return
+            }
 
             setStatusCount({
-                proses: data.filter((o) => o.status === 'Proses').length,
-                siap: data.filter((o) => o.status === 'Siap').length,
-                selesai: data.filter((o) => o.status === 'Selesai').length,
+                proses: statusData.filter(o => o.status === 'Proses').length,
+                siap: statusData.filter(o => o.status === 'Siap').length,
+                selesai: statusData.filter(o => o.status === 'Selesai').length,
             })
 
             setLoading(false)
