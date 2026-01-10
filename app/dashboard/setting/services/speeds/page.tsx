@@ -36,13 +36,13 @@ export default function SpeedsPage() {
             )
         }
     }
+
     useEffect(() => {
         const run = async () => {
             await load()
         }
         run()
     }, [])
-
 
     /* ================= CRUD ================= */
 
@@ -224,7 +224,7 @@ function FormRow({
                 />
 
                 <input
-                    className="focus:outline-none focus:ring-2 focus:ring-blue-500 p-2 font-semibold border border-slate-200 rounded-xl"
+                    className="focus:outline-none focus:ring-2 focus:ring-blue-500 p-2 border border-slate-200 rounded-xl"
                     placeholder="Deskripsi / estimasi waktu"
                     value={item.description}
                     onChange={(e) =>
@@ -237,7 +237,7 @@ function FormRow({
                     <input
                         id="kiloan"
                         type="number"
-                        className="focus:outline-none focus:ring-2 focus:ring-blue-500 p-2 font-semibold border border-slate-200 rounded-xl"
+                        className="focus:outline-none focus:ring-2 focus:ring-blue-500 p-2 border border-slate-200 rounded-xl"
                         placeholder="Biaya tambahan kiloan"
                         value={item.extra_price_kilo}
                         onChange={(e) =>
@@ -252,7 +252,7 @@ function FormRow({
                     <input
                         id="satuan"
                         type="number"
-                        className="focus:outline-none focus:ring-2 focus:ring-blue-500 p-2 font-semibold border border-slate-200 rounded-xl"
+                        className="focus:outline-none focus:ring-2 focus:ring-blue-500 p-2 border border-slate-200 rounded-xl"
                         placeholder="Biaya tambahan satuan"
                         value={item.extra_price_satuan}
                         onChange={(e) =>
